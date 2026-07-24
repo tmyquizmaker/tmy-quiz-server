@@ -17,6 +17,9 @@ class NetworkClient:
         self.on_player_joined_callback = None
         # Callback exécuté lors du lancement du quiz par l'hôte
         self.on_quiz_started_callback = None
+        # Nouveaux callbacks pour la synchronisation des questions par le prof
+        self.on_change_question_callback = None
+        self.on_quiz_ended_callback = None
 
         self.setup_events()
 
@@ -48,6 +51,21 @@ class NetworkClient:
             if self.on_quiz_started_callback:
                 # Transmet les données (questions) au callback
                 self.on_quiz_started_callback(data)
+
+        # ----------------------------------------------------
+        # ⏭️ Nouveaux écouteurs pour la gestion synchrone
+        # ----------------------------------------------------
+        @self.sio.on('change_question')
+        def on_change_question(data):
+            print(f"⏭️ Ordre reçu : passage à la question index {data.get('question_index')}")
+            if self.on_change_question_callback:
+                self.on_change_question_callback(data)
+
+        @self.sio.on('quiz_ended')
+        def on_quiz_ended(data):
+            print("🏁 Quiz terminé par le professeur !")
+            if self.on_quiz_ended_callback:
+                self.on_quiz_ended_callback(data)
 
     def connect(self, max_retries=3):
         """Tente de se connecter au serveur avec réessai en cas d'endormissement de Render."""
@@ -86,3 +104,16 @@ class NetworkClient:
         self.connect()
         if self.is_connected:
             self.sio.emit('start_quiz', {'pin': pin, 'questions': questions})
+
+    # ----------------------------------------------------
+    # 📤 Nouvelles méthodes d'émission
+    # ----------------------------------------------------
+    def send_next_question(self, pin):
+        """Appelé uniquement par le PROFESSEUR pour faire passer tout le monde à la suite."""
+        if self.is_connected:
+            self.sio.emit('next_question', {'pin': pin})
+
+    def send_score_update(self, pin, player_name, score):
+        """Appelé par L'ÉLÈVE lorsqu'il valide une réponse pour mettre à jour son score sur l'hôte."""
+        if self.is_connected:
+            self.sio.emit('update_score', {'pin': pin, 'player': player_name, 'score': score})

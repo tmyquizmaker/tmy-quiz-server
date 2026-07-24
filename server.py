@@ -10,7 +10,8 @@ from flask_socketio import SocketIO, emit, join_room
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Dictionnaire des salons actifs : { "PIN": {"title": str, "players": [str]} }
+# Dictionnaire des salons actifs : 
+# { "PIN": {"title": str, "players": [str], "questions": [], "current_question": 0} }
 active_lobbies = {}
 
 @socketio.on('connect')
@@ -28,7 +29,9 @@ def handle_create_room(data):
     
     active_lobbies[pin] = {
         "title": title,
-        "players": []
+        "players": [],
+        "questions": [],
+        "current_question": 0
     }
     join_room(pin)
     print(f"🎮 Salon créé : PIN [{pin}] | Titre : {title}")
@@ -56,17 +59,50 @@ def handle_join_room(data):
         print(f"❌ Échec : PIN [{pin}] inexistant.")
 
 # ========================================================
-# 🚀 DÉMARRAGE DU QUIZ ET TRANSMISSION DES QUESTIONS AUX ÉLÈVES
+# 🚀 DÉMARRAGE DU QUIZ ET TRANSMISSION DE LA 1ÈRE QUESTION
 # ========================================================
 @socketio.on('start_quiz')
 def handle_start_quiz(data):
     pin = data.get('pin', '').replace(" ", "")
     questions = data.get('questions', [])
 
-    print(f"🚀 Lancement du quiz pour le salon [{pin}] avec {len(questions)} questions")
+    if pin in active_lobbies:
+        active_lobbies[pin]["questions"] = questions
+        active_lobbies[pin]["current_question"] = 0  # On commence à la première question (index 0)
 
-    # Émettre l'ordre de lancement à TOUS les élèves dans le salon avec les questions
-    emit('quiz_started', {'pin': pin, 'questions': questions}, to=pin)
+        print(f"🚀 Lancement du quiz pour le salon [{pin}] avec {len(questions)} questions")
+
+        # Option A : Soit tu envoies toutes les questions et l'index 0
+        # Option B : Soit tu n'envoies QUE la première question pour empêcher la triche
+        emit('quiz_started', {
+            'pin': pin, 
+            'questions': questions, 
+            'current_question': 0
+        }, to=pin)
+
+# ========================================================
+# ⏭️ PASSAGE À LA QUESTION SUIVANTE (PROFESSEUR SEULEMENT)
+# ========================================================
+@socketio.on('next_question')
+def handle_next_question(data):
+    pin = data.get('pin', '').replace(" ", "")
+
+    if pin in active_lobbies:
+        lobby = active_lobbies[pin]
+        lobby["current_question"] += 1
+        
+        total_questions = len(lobby["questions"])
+        current_index = lobby["current_question"]
+
+        if current_index < total_questions:
+            print(f"⏭️ Salon [{pin}] -> Passage à la question {current_index + 1}/{total_questions}")
+            # On informe TOUS les élèves du salon de changer de question
+            emit('change_question', {
+                'question_index': current_index
+            }, to=pin)
+        else:
+            print(f"🏁 Salon [{pin}] -> Quiz terminé !")
+            emit('quiz_ended', {'pin': pin}, to=pin)
 
 # ========================================================
 # 📊 MISE À JOUR DU CLASSEMENT HÔTE EN TEMPS RÉEL

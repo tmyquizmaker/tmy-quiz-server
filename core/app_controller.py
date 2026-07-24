@@ -1,7 +1,7 @@
 """
 ===========================================
 TMY Quiz Maker
-Version 5.0
+Version 5.1
 
 app_controller.py
 
@@ -192,7 +192,7 @@ class AppController:
         self.lobby_page.pack(fill="both", expand=True)
 
     def start_student_game(self):
-        """Démarre directement la session de jeu pour l'élève"""
+        """Démarre directement la session de jeu pour l'élève et écoute l'ordre du prof"""
         print("▶️ Transition vers PlayQuizPage pour l'élève...")
         self.clear_page()
         stop_music()
@@ -208,6 +208,33 @@ class AppController:
         )
         self.play.pack(fill="both", expand=True)
 
+        # -----------------------------------------------------------
+        # ⏭️ ÉCOUTE DE L'ORDRE DU PROFESSEUR POUR PASSER LA QUESTION
+        # -----------------------------------------------------------
+        def handle_change_question(data):
+            new_index = data.get('question_index', 0)
+            print(f"📩 Ordre serveur reçu côté élève : passer à l'index {new_index}")
+            self.root.after(0, lambda: self.passer_question_suivante_eleve(new_index))
+
+        def handle_quiz_ended(data):
+            print("🏁 Signal de fin du quiz reçu par l'élève !")
+            # Déclencher la fin du jeu pour l'élève si la méthode existe dans PlayQuizPage
+            if hasattr(self.play, 'finish_quiz'):
+                self.root.after(0, self.play.finish_quiz)
+            else:
+                self.root.after(0, self.show_home)
+
+        self.network.on_change_question_callback = handle_change_question
+        self.network.on_quiz_ended_callback = handle_quiz_ended
+
+    def passer_question_suivante_eleve(self, index):
+        """Passe la question de l'élève à l'index demandé par le serveur"""
+        if hasattr(self, 'play') and self.play:
+            if hasattr(self.play, 'load_question_by_index'):
+                self.play.load_question_by_index(index)
+            elif hasattr(self.play, 'next_question'):
+                self.play.next_question()
+
     def show_settings(self):
         print("Accès aux Paramètres")
 
@@ -215,7 +242,7 @@ class AppController:
         print("Accès aux Statistiques")
 
     # =====================================
-    # 📁 MES QUIZ (HÔTE)
+    # 📁 MES QUIZ (HÔTE / PROFESSEUR)
     # =====================================
     def show_my_quizzes(self):
         self.clear_page()
@@ -256,6 +283,17 @@ class AppController:
         )
         title_lbl.pack(side="left")
 
+        # ⏭️ BOUTON "QUESTION SUIVANTE" ACCESSIBLE UNIQUEMENT PAR LE PROFESSEUR
+        next_q_btn = ctk.CTkButton(
+            header,
+            text="Question Suivante ➔",
+            fg_color="#2FA572",
+            hover_color="#1E6B49",
+            font=("Arial", 14, "bold"),
+            command=self.host_click_next_question
+        )
+        next_q_btn.pack(side="left", padx=20)
+
         back_btn = ctk.CTkButton(
             header, 
             text="Terminer la session", 
@@ -273,6 +311,13 @@ class AppController:
             def on_leaderboard_update(data):
                 players_data = data.get('players', []) if isinstance(data, dict) else data
                 self.root.after(0, lambda: self.teacher_dashboard.update_dashboard(players_data))
+
+    def host_click_next_question(self):
+        """Appelé lorsque le professeur clique sur le bouton Question Suivante"""
+        clean_pin = getattr(self, 'current_active_pin', None)
+        if clean_pin:
+            print(f"⏭️ Le professeur demande le passage à la question suivante pour la salle [{clean_pin}]")
+            self.network.send_next_question(clean_pin)
 
     def open_quiz_lobby(self, quiz_title, questions):
         """Ouvre la salle d'attente (Lobby) et l'enregistre auprès du serveur WebSocket"""
