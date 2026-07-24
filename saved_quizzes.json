@@ -1,0 +1,103 @@
+[
+    {
+        "id": 1,
+        "title": "Capitale",
+        "total_questions": 4,
+        "questions": [
+            {
+                "question": "Quel est le capital du Bresil",
+                "A": "Foz do Iguacu",
+                "B": "Sao Paulo",
+                "C": "Brasilia",
+                "D": "Curitiba",
+                "correct": "C",
+                "time": "20s",
+                "difficulty": "medium"
+            },
+            {
+                "question": "Quel est la capital de la France",
+                "A": "Paris",
+                "B": "Marseille",
+                "C": "Rio de Janerio",
+                "D": "Monarco",
+                "correct": "A",
+                "time": "20s",
+                "difficulty": "hard"
+            },
+            {
+                "question": "Quel est la capital d'Haiti",
+                "A": "Paris",
+                "B": "Petion-ville",
+                "C": "Cap-Haitien",
+                "D": "Port-au-prince",
+                "correct": "D",
+                "time": "15s",
+                "difficulty": "easy"
+            },
+            {
+                "question": "Question 4",
+                "A": "",
+                "B": "",
+                "C": "",
+                "D": "",
+                "correct": "A",
+                "time": "20s",
+                "difficulty": "medium"
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "title": "Mon Quiz Personnalisé",
+        "total_questions": 2,
+        "questions": [
+            {
+                "question": "Haiti est diviser en combien de departement",
+                "A": "10",
+                "B": "11",
+                "C": "12",
+                "D": "13",
+                "correct": "A",
+                "time": "10s",
+                "difficulty": "easy"
+            },
+            {
+                "question": "Quesl est le cheflieu  de Nord'Ouest",
+                "A": "Jean-rabel",
+                "B": "Cap-haitien",
+                "C": "Port-de-paix",
+                "D": "Port au prince",
+                "correct": "C",
+                "time": "20s",
+                "difficulty": "medium"
+            }
+        ]
+    },
+    {
+        "id": 3,
+        "title": "Histoire",
+        "total_questions": 2,
+        "questions": [
+            {
+                "question": "comment s'appelle la plus grande parti du corps",
+                "A": "Cour",
+                "B": "Cerveau",
+                "C": "Yeux",
+                "D": "Bouche",
+                "correct": "B",
+                "time": "20s",
+                "difficulty": "medium"
+            },
+            {
+                "question": "quel est ton nom",
+                "A": "Ma Marcelus",
+                "B": "Alceme",
+                "C": "Taina",
+                "D": "Fendia",
+                "correct": "B",
+                "time": "20s",
+                "difficulty": "medium"
+            }
+        ]
+    }
+]

@@ -1,0 +1,34 @@
+{
+    "voice": "fr-FR-VivienneMultilingualNeural",
+    "rate": "+0%",
+    "volume": "+0%",
+
+    "pronunciations": {
+
+        "Python": "Piton",
+        "Google": "Gougueul",
+        "Gemini": "Jémini",
+        "ChatGPT": "Chat G P T",
+        "WhatsApp": "Ouatsap",
+
+        "API": "A P I",
+        "IA": "I A",
+        "CPU": "C P U",
+        "GPU": "G P U",
+        "RAM": "R A M",
+        "ROM": "R O M",
+        "USB": "U S B",
+        "Wi-Fi": "Ouifi",
+        "Bluetooth": "Bloutousse",
+
+        "TMY": "T M Y",
+
+        "Android": "Androïde",
+        "Windows": "Ouindoze",
+
+        "TikTok": "TikTok",
+        "Instagram": "Instagram",
+        "Facebook": "Facebook",
+        "YouTube": "YouTube"
+    }
+}
