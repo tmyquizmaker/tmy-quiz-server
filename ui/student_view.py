@@ -1,94 +1,139 @@
 import customtkinter as ctk
-from leaderboard_overlay import StudentRankWidget
 
 class StudentView(ctk.CTkFrame):
-    def __init__(self, master, current_player_name="Élève", socket_client=None):
-        super().__init__(master, fg_color="#121620")
-        self.master = master
-        self.current_player_name = current_player_name
-        self.socket_client = socket_client
+    def __init__(self, parent, controller):
+        super().__init__(parent, fg_color="#0b132b")
+        self.controller = controller
         self.option_buttons = []
 
-        self.pack(fill="both", expand=True, padx=20, pady=20)
-        self._build_ui()
+        # --- HEADER / EN-TÊTE ---
+        self.header_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.header_frame.pack(fill="x", px=20, py=10)
 
-    def _build_ui(self):
-        # Header avec Widget de Rang en Direct (top 3)
-        self.rank_widget = StudentRankWidget(self, current_player_name=self.current_player_name)
-        self.rank_widget.pack(fill="x", pady=(0, 15))
-
-        # Libellé de la question
-        self.question_label = ctk.CTkLabel(
-            self, 
-            text="En attente du lancement de la question...", 
+        self.logo_label = ctk.CTkLabel(
+            self.header_frame, 
+            text="🎮 TMY QUIZ", 
             font=("Arial", 16, "bold"), 
-            text_color="#FFFFFF",
-            wraplength=400
+            text_color="#00b4d8"
         )
-        self.question_label.pack(pady=15)
+        self.logo_label.pack(side="left")
 
-        # Zone pour afficher l'état d'attente (masqué par défaut)
+        self.stats_label = ctk.CTkLabel(
+            self.header_frame, 
+            text="🏅 3ème  🔥 x1  ⚡ 1241 XP", 
+            font=("Arial", 14, "bold"), 
+            text_color="#ffd166"
+        )
+        self.stats_label.pack(side="right")
+
+        # --- INFOS QUESTION & TIMER ---
+        self.info_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.info_frame.pack(fill="x", px=20, py=(5, 0))
+
+        self.question_num_label = ctk.CTkLabel(
+            self.info_frame, 
+            text="Question -- / --", 
+            font=("Arial", 14, "bold"), 
+            text_color="#ffffff"
+        )
+        self.question_num_label.pack(side="left")
+
+        self.timer_label = ctk.CTkLabel(
+            self.info_frame, 
+            text="⏳ --s", 
+            font=("Arial", 14, "bold"), 
+            text_color="#4cc9f0"
+        )
+        self.timer_label.pack(side="right")
+
+        # --- BARRE DE PROGRESSION ---
+        self.progress_bar = ctk.CTkProgressBar(
+            self, 
+            progress_color="#00b4d8", 
+            fg_color="#1c2541", 
+            height=8
+        )
+        self.progress_bar.pack(fill="x", px=20, py=10)
+        self.progress_bar.set(0.5)
+
+        # --- INTITULÉ DE LA QUESTION ---
+        self.question_card = ctk.CTkFrame(self, fg_color="#1c2541", corner_radius=12)
+        self.question_card.pack(fill="x", px=20, py=15, ipady=20)
+
+        self.question_label = ctk.CTkLabel(
+            self.question_card, 
+            text="En attente de la question...", 
+            font=("Arial", 18, "bold"), 
+            text_color="#ffffff",
+            wraplength=600
+        )
+        self.question_label.pack(expand=True)
+
+        # --- CONTENEUR DES BOUTONS D'OPTIONS ---
+        self.options_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.options_frame.pack(fill="both", expand=True, px=20, py=10)
+
+        # --- LABEL DE STATUT (ex: "Réponse envoyée !") ---
         self.status_label = ctk.CTkLabel(
             self, 
             text="", 
-            font=("Arial", 13, "italic"), 
-            text_color="#FFD700"
+            font=("Arial", 14, "italic"), 
+            text_color="#4cc9f0"
         )
-        self.status_label.pack(pady=5)
+        self.status_label.pack(pady=10)
 
-        # Conteneur des options de réponse
-        self.options_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.options_frame.pack(fill="both", expand=True, pady=10)
+    # =========================================================================
+    # MÉTHODES LOGIQUES
+    # =========================================================================
 
     def load_question(self, question_data):
         """
-        Appelé lors de la réception du signal 'NEW_QUESTION' par le serveur.
-        Réinitialise l'interface et affiche la nouvelle question.
+        Chargement d'une nouvelle question reçue du serveur
         """
-        # 1. Effacer l'état d'attente
+        # Réinitialisation
         self.status_label.configure(text="")
-        
-        # 2. Mettre à jour l'intitulé
-        self.question_label.configure(text=question_data.get("question", "Question"))
 
-        # 3. Supprimer les anciens boutons d'options
+        # Mise à jour de l'intitulé
+        self.question_label.configure(
+            text=question_data.get("question", "Question")
+        )
+
+        # Suppression des anciens boutons de réponse
         for btn in self.option_buttons:
             btn.destroy()
         self.option_buttons.clear()
 
-        # 4. Générer les nouveaux boutons d'options
+        # Génération des nouveaux boutons de réponse
         options = question_data.get("options", [])
+        letters = ["A", "B", "C", "D", "E", "F"]
+
         for idx, option_text in enumerate(options):
+            prefix = letters[idx] if idx < len(letters) else str(idx + 1)
+            
             btn = ctk.CTkButton(
                 self.options_frame,
-                text=option_text,
-                font=("Arial", 13),
-                fg_color="#1F6AA5",
-                hover_color="#144870",
-                corner_radius=8,
-                height=45,
+                text=f"{prefix}.   {option_text}",
+                font=("Arial", 14),
+                fg_color="#1c2541",
+                hover_color="#3a506b",
+                corner_radius=10,
+                height=50,
+                anchor="w",
                 command=lambda opt=option_text: self.submit_answer(opt)
             )
-            btn.pack(fill="x", pady=5)
+            btn.pack(fill="x", pady=6)
             self.option_buttons.append(btn)
 
-    def submit_answer(self, selected_option):
-        """Action déclenchée lors du clic sur une réponse."""
-        # 1. Bloquer / Désactiver tous les boutons de réponse
+    def submit_answer(self, chosen_option):
+        """
+        Envoie la réponse de l'élève et désactive les choix
+        """
+        # Désactiver les boutons de réponse après le clic
         for btn in self.option_buttons:
             btn.configure(state="disabled")
 
-        # 2. Afficher le message d'attente du professeur
-        self.status_label.configure(text="⏳ Reponse enregistrée. En attente du professeur...")
+        self.status_label.configure(text="🔒 Réponse enregistrée ! En attente du professeur...")
 
-        # 3. Envoyer la réponse au serveur
-        if self.socket_client:
-            self.socket_client.send({
-                "action": "SUBMIT_ANSWER",
-                "player": self.current_player_name,
-                "answer": selected_option
-            })
-
-    def update_leaderboard(self, leaderboard_data):
-        """Met à jour le Top 3 et le rang via le widget dédié"""
-        self.rank_widget.update_ranks(leaderboard_data)
+        # Transmettre la réponse au contrôleur réseau
+        if hasattr(self.controller, "send_answer"):
+            self.controller.send_answer(chosen_option)
