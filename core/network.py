@@ -99,11 +99,15 @@ class NetworkClient:
         else:
             response_callback({'success': False, 'message': '❌ Impossible de contacter le serveur.'})
 
-    # Méthode pour envoyer l'ordre de démarrage du quiz + les questions
-    def start_quiz(self, pin, questions=None):
+    # Méthode pour envoyer l'ordre de démarrage du quiz + les questions + le nom du prof
+    def start_quiz(self, pin, questions=None, teacher_name="Professeur"):
         self.connect()
         if self.is_connected:
-            self.sio.emit('start_quiz', {'pin': pin, 'questions': questions})
+            self.sio.emit('start_quiz', {
+                'pin': pin,
+                'questions': questions,
+                'teacher_name': teacher_name
+            })
 
     # ----------------------------------------------------
     # 📤 Nouvelles méthodes d'émission

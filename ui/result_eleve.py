@@ -52,10 +52,10 @@ class ResultElevePage(ctk.CTkFrame):
         if not date_quiz:
             date_quiz = datetime.now().strftime("%d %b %Y")
 
-        self.configure(fg_color="#090D16")  # Fond très sombre comme la maquette
+        self.configure(fg_color="#090D16")  # Fond très sombre
 
         # ---------------------------------------------------------
-        # CREATION DU CONTENEUR PRINCIPAL (Correction du crash)
+        # CREATION DU CONTENEUR PRINCIPAL
         # ---------------------------------------------------------
         self.main_container = ctk.CTkScrollableFrame(
             self,
@@ -64,21 +64,32 @@ class ResultElevePage(ctk.CTkFrame):
         )
         self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # Calculs et logique des échelons de performance
+        # ---------------------------------------------------------
+        # LOGIQUE DES MENTIONS ET STICKERS SELON LE SCORE
+        # ---------------------------------------------------------
         pourcentage = int((score / total) * 100) if total > 0 else 0
 
         if pourcentage < 50:
+            mention = "INSUFFISANT !"
             titre_rank = "🌱 Insuffisant"
             message = "Les connaissances évaluées ne sont pas encore acquises.\nUn travail plus régulier et des révisions approfondies sont nécessaires pour progresser."
-            rank_color = "#FF5252"  # Rouge / Orange sombre pour signaler à revoir
+            conseil_perf = "Ne décourage pas !\nRévise le cours et réessaie."
+            rank_color = "#FF5252"  # Rouge
+            sticker = "🌱"
         elif pourcentage < 80:
+            mention = "SATISFAISANT !"
             titre_rank = "🔥 Satisfaisant"
             message = "Les objectifs principaux sont globalement atteints.\nDes efforts supplémentaires permettront de consolider les acquis et d'améliorer les résultats."
-            rank_color = "#2196F3"  # Bleu pour satisfaisant
+            conseil_perf = "Bon travail !\nEncore un petit effort pour l'excellence."
+            rank_color = "#2196F3"  # Bleu
+            sticker = "🔥"
         else:
+            mention = "EXCELLENT !"
             titre_rank = "👑 Excellent"
             message = "Excellente maîtrise du sujet !\nLes compétences et connaissances évaluées sont parfaitement acquises."
-            rank_color = "#00E676"  # Vert pour excellent
+            conseil_perf = "Félicitations !\nTu maîtrises parfaitement le sujet."
+            rank_color = "#00E676"  # Vert
+            sticker = "👑"
 
         # ---------------------------------------------------------
         # 1. BARRE SUPERIEURE : INFOS DU QUIZ & ÉLÈVE
@@ -102,7 +113,6 @@ class ResultElevePage(ctk.CTkFrame):
             except Exception as e:
                 print("Erreur logo:", e)
 
-        # Grille d'en-tête (Logo, Titre, Prof, Élève, Date)
         if self.logo_img:
             ctk.CTkLabel(self.header_info, image=self.logo_img, text="").pack(side="left", padx=15)
 
@@ -119,7 +129,7 @@ class ResultElevePage(ctk.CTkFrame):
             ctk.CTkLabel(self.header_info, image=self.logo_img, text="").pack(side="right", padx=15)
 
         # ---------------------------------------------------------
-        # 2. CARTE BANNIÈRE : FÉLICITATIONS
+        # 2. CARTE BANNIÈRE : MENTION & STICKER
         # ---------------------------------------------------------
         self.banner_card = ctk.CTkFrame(
             self.main_container, 
@@ -137,14 +147,15 @@ class ResultElevePage(ctk.CTkFrame):
             text_banner, 
             text="🏆 QUIZ TERMINÉ !", 
             font=("Arial", 12, "bold"), 
-            text_color="#2196F3"
+            text_color="#94A3B8"
         ).pack(anchor="w", pady=(5, 0))
 
+        # Affichage de la Mention à la place de "FÉLICITATIONS !"
         ctk.CTkLabel(
             text_banner, 
-            text="FÉLICITATIONS !", 
+            text=mention, 
             font=("Arial", 26, "bold"), 
-            text_color="#FFFFFF"
+            text_color=rank_color
         ).pack(anchor="w")
 
         ctk.CTkLabel(
@@ -154,10 +165,11 @@ class ResultElevePage(ctk.CTkFrame):
             text_color="#94A3B8"
         ).pack(anchor="w")
 
-        # Badge Visuel (Côté droit)
+        # Badge Visuel avec STICKER adapté
         badge_frame = ctk.CTkFrame(self.banner_card, fg_color="#1E293B", width=80, height=80, corner_radius=40)
         badge_frame.pack(side="right", padx=30)
-        ctk.CTkLabel(badge_frame, text="⭐", font=("Arial", 35)).pack(expand=True)
+        badge_frame.pack_propagate(False)
+        ctk.CTkLabel(badge_frame, text=sticker, font=("Segoe UI Emoji", 38)).pack(expand=True)
 
         # ---------------------------------------------------------
         # 3. GRILLE DE STATISTIQUES (2x2)
@@ -190,12 +202,13 @@ class ResultElevePage(ctk.CTkFrame):
         # Circle Score
         circle = ctk.CTkFrame(perf_sub, fg_color="#1E293B", width=70, height=70, corner_radius=35)
         circle.pack(side="left", padx=(0, 15))
-        ctk.CTkLabel(circle, text=f"{pourcentage}%", font=("Arial", 16, "bold"), text_color="#2196F3").pack(expand=True)
+        circle.pack_propagate(False)
+        ctk.CTkLabel(circle, text=f"{pourcentage}%", font=("Arial", 16, "bold"), text_color=rank_color).pack(expand=True)
 
         perf_txt = ctk.CTkFrame(perf_sub, fg_color="transparent")
         perf_txt.pack(side="left", fill="both", expand=True)
         ctk.CTkLabel(perf_txt, text=titre_rank, font=("Arial", 14, "bold"), text_color=rank_color).pack(anchor="w")
-        ctk.CTkLabel(perf_txt, text="Tu es sur la bonne voie.\nContinue comme ça !", font=("Arial", 11), text_color="#94A3B8", justify="left").pack(anchor="w")
+        ctk.CTkLabel(perf_txt, text=conseil_perf, font=("Arial", 11), text_color="#94A3B8", justify="left").pack(anchor="w")
 
         # Panel Droit : Récapitulatif
         self.recap_card = ctk.CTkFrame(self.bottom_grid, fg_color="#111726", corner_radius=12)

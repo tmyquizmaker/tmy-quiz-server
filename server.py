@@ -11,7 +11,7 @@ app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Dictionnaire des salons actifs : 
-# { "PIN": {"title": str, "players": [str], "questions": [], "current_question": 0} }
+# { "PIN": {"title": str, "players": [str], "questions": [], "current_question": 0, "teacher_name": str} }
 active_lobbies = {}
 
 @socketio.on('connect')
@@ -31,7 +31,8 @@ def handle_create_room(data):
         "title": title,
         "players": [],
         "questions": [],
-        "current_question": 0
+        "current_question": 0,
+        "teacher_name": "Professeur"
     }
     join_room(pin)
     print(f"🎮 Salon créé : PIN [{pin}] | Titre : {title}")
@@ -65,19 +66,21 @@ def handle_join_room(data):
 def handle_start_quiz(data):
     pin = data.get('pin', '').replace(" ", "")
     questions = data.get('questions', [])
+    teacher_name = data.get('teacher_name', 'Professeur')[cite: 1]
 
     if pin in active_lobbies:
         active_lobbies[pin]["questions"] = questions
         active_lobbies[pin]["current_question"] = 0  # On commence à la première question (index 0)
+        active_lobbies[pin]["teacher_name"] = teacher_name[cite: 1]
 
-        print(f"🚀 Lancement du quiz pour le salon [{pin}] avec {len(questions)} questions")
+        print(f"🚀 Lancement du quiz par '{teacher_name}' pour le salon [{pin}] avec {len(questions)} questions")
 
-        # Option A : Soit tu envoies toutes les questions et l'index 0
-        # Option B : Soit tu n'envoies QUE la première question pour empêcher la triche
+        # Diffuser à tous les élèves de la salle
         emit('quiz_started', {
             'pin': pin, 
             'questions': questions, 
-            'current_question': 0
+            'current_question': 0,
+            'teacher_name': teacher_name[cite: 1]
         }, to=pin)
 
 # ========================================================

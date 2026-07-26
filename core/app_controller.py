@@ -143,8 +143,15 @@ class AppController:
                 result["success"] = True
                 # Stockage des infos élève & métadonnées du quiz
                 self.current_student_name = full_name
-                self.current_quiz_title = data.get('title', 'Quiz en direct')
-                self.current_teacher_name = data.get('teacher_name', 'Professeur')
+                self.current_quiz_title = data.get('title') or data.get('quiz_title', 'Quiz en direct')
+                
+                # Récupérer le nom du prof depuis 'teacher_name', 'nom_prof' ou 'professeur'
+                self.current_teacher_name = (
+                    data.get('teacher_name') or 
+                    data.get('nom_prof') or 
+                    data.get('professeur') or 
+                    "Professeur"
+                )
 
                 self.root.after(0, lambda: self.show_student_lobby(
                     clean_pin, 
@@ -201,6 +208,8 @@ class AppController:
                     self.current_quiz_title = data['title']
                 if 'teacher_name' in data:
                     self.current_teacher_name = data['teacher_name']
+                elif 'nom_prof' in data:
+                    self.current_teacher_name = data['nom_prof']
 
             # Basculer l'affichage vers la page de jeu manuel pour l'élève
             self.root.after(0, self.start_student_game)
@@ -277,8 +286,8 @@ class AppController:
         print(f"🔴 L'hôte lance le quiz pour la salle PIN: {clean_pin}")
 
         if clean_pin:
-            # On envoie le PIN ET la liste des questions au serveur !
-            self.network.start_quiz(clean_pin, self.current_quiz)
+            # On passe le nom du professeur en 3ème argument
+            self.network.start_quiz(clean_pin, self.current_quiz, self.current_teacher_name)
 
         self.show_host_dashboard()
 

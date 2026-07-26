@@ -234,7 +234,25 @@ class PlayQuizManuelPage(ctk.CTkFrame):
         self.current_question = question_data
         self.index = current_index
         self.total_questions = total_questions
-        
+
+        # Extraction dynamique du nom du professeur s'il est transmis (mis à jour)
+        prof_recup = (
+            question_data.get("teacher_name") or 
+            question_data.get("nom_prof") or 
+            question_data.get("prof_name") or 
+            question_data.get("professeur") or 
+            question_data.get("author") or 
+            question_data.get("creator")
+        )
+        if prof_recup:
+            self.nom_prof = prof_recup
+
+        # Extraction dynamique du titre du quiz s'il est transmis
+        titre_recup = question_data.get("titre_quiz") or question_data.get("title")
+        if titre_recup:
+            self.titre_quiz = titre_recup
+            self.title_lbl.configure(text=f"🎮 {self.titre_quiz.upper()}")
+
         self.answered = False
         self.selected_choice = None
 
@@ -437,7 +455,7 @@ class PlayQuizManuelPage(ctk.CTkFrame):
         # Masquer la page du quiz
         self.pack_forget()
 
-        # Instancier et afficher la page de résultats
+        # Instancier et afficher la page de résultats avec les informations du professeur
         page_resultats = ResultElevePage(
             master=self.master,
             titre_quiz=self.titre_quiz,

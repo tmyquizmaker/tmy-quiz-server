@@ -127,5 +127,61 @@
                 "difficulty": "hard"
             }
         ]
+    },
+    {
+        "id": 5,
+        "title": "Physique",
+        "teacher": "Marcelus",
+        "total_questions": 2,
+        "questions": [
+            {
+                "question": "quel est le symbole de l'intensite electrique",
+                "A": "A",
+                "B": "I",
+                "C": "S",
+                "D": "E",
+                "correct": "B",
+                "time": "10s",
+                "difficulty": "hard"
+            },
+            {
+                "question": "Quel est la formule de la tension au borne d'une resistence",
+                "A": "U = R I",
+                "B": "U = R / I",
+                "C": "U = I / R",
+                "D": "U = R Q",
+                "correct": "A",
+                "time": "15s",
+                "difficulty": "medium"
+            }
+        ]
+    },
+    {
+        "id": 6,
+        "title": "Alternatif",
+        "teacher": "Max Marcelus",
+        "total_questions": 2,
+        "questions": [
+            {
+                "question": "dans quel cas on a u = R I",
+                "A": "1er cas",
+                "B": "2eme cas",
+                "C": "3eme",
+                "D": "4eme",
+                "correct": "A",
+                "time": "10s",
+                "difficulty": "hard"
+            },
+            {
+                "question": "quel est la formul du tension au borne dun condensateur",
+                "A": "e/r",
+                "B": "b/e",
+                "C": "U = C/I",
+                "D": "w/r",
+                "correct": "C",
+                "time": "20s",
+                "difficulty": "medium"
+            }
+        ]
     }
 ]
