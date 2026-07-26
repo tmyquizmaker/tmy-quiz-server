@@ -7492,5 +7492,37 @@
             "difficulty": "easy",
             "time": 15
         }
+    ],
+    [
+        {
+            "question": "Quel astre est au centre de notre système solaire, autour duquel tournent toutes les planètes ?",
+            "A": "La planète Terre",
+            "B": "Notre satellite, la Lune",
+            "C": "Notre étoile, le Soleil",
+            "D": "La planète Mars",
+            "correct": "C",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "Quel est le nom du satellite naturel qui gravite en permanence autour de notre planète bleue, la Terre ?",
+            "A": "Phobos, un satellite de Mars",
+            "B": "Titan, une lune de Saturne",
+            "C": "La Lune, notre fidèle compagne",
+            "D": "Europe, un satellite de Jupiter",
+            "correct": "C",
+            "difficulty": "easy",
+            "time": 20
+        },
+        {
+            "question": "Parmi les planètes du système solaire, laquelle est célèbre pour son surnom de « Planète Rouge » ?",
+            "A": "Vénus, la jumelle de la Terre",
+            "B": "Mars, avec ses roches riches en fer",
+            "C": "Jupiter, la géante gazeuse",
+            "D": "Saturne, la planète aux anneaux",
+            "correct": "B",
+            "difficulty": "easy",
+            "time": 20
+        }
     ]
 ]

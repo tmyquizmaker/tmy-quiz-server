@@ -26,7 +26,7 @@ class ManualQuizPage(ctk.CTkFrame):
         self.container.pack(expand=True, fill="both", padx=25, pady=20)
 
         # ---------------------------------------------
-        # 1. BARRE SUPÉRIEURE (Titre, Nom du Prof & Actions)
+        # 1. BARRE SUPÉRIEURE (Titre, Prof & Actions)
         # ---------------------------------------------
         self.top_bar = ctk.CTkFrame(self.container, fg_color="#1E222D", corner_radius=12)
         self.top_bar.pack(fill="x", pady=(0, 15), ipady=5)
@@ -37,14 +37,14 @@ class ManualQuizPage(ctk.CTkFrame):
         )
         self.back_btn.pack(side="left", padx=15)
 
-        # INPUT 1 : Titre du Quiz
+        # CHAMP : Titre du Quiz
         self.quiz_title_entry = ctk.CTkEntry(
-            self.top_bar, placeholder_text="Titre de ton Quiz (ex: Master History 2026)",
-            font=("Arial", 13, "bold"), width=280, fg_color="#121620", border_color="#2B303C"
+            self.top_bar, placeholder_text="Titre du Quiz (ex: Master History 2026)",
+            font=("Arial", 13, "bold"), width=260, fg_color="#121620", border_color="#2B303C"
         )
         self.quiz_title_entry.pack(side="left", padx=5, expand=True, fill="x")
 
-        # INPUT 2 : Nom du Professeur (AJOUTÉ)
+        # CHAMP : Nom du Professeur
         self.prof_name_entry = ctk.CTkEntry(
             self.top_bar, placeholder_text="Nom du Prof (ex: Prof. Dubois)",
             font=("Arial", 13, "bold"), width=200, fg_color="#121620", border_color="#2B303C"
@@ -229,16 +229,16 @@ class ManualQuizPage(ctk.CTkFrame):
             btn.pack(fill="x", pady=2)
 
     def finish_quiz_creation(self):
-        """Valide et transmet le quiz terminé avec le nom du prof"""
+        """Valide et transmet le quiz avec le Titre et le Nom du Professeur"""
         self.save_current_form_data()
-        
-        # Récupération des deux valeurs
-        title = self.quiz_title_entry.get().strip() or "Mon Quiz Personnalisé"
-        teacher_name = self.prof_name_entry.get().strip() or "Professeur Anonyme"
 
-        # Transmet le titre, le nom du prof et la liste des questions
+        # Récupération des données saisies
+        title = self.quiz_title_entry.get().strip() or "Mon Quiz Personnalisé"
+        teacher = self.prof_name_entry.get().strip() or "Professeur Anonyme"
+
+        # Transmet le Titre, le Nom du Prof et les Questions au Callback
         self.on_quiz_created(
-            quiz_title=title, 
-            teacher_name=teacher_name, 
+            quiz_title=title,
+            teacher_name=teacher,
             quiz_data=self.questions
         )

@@ -99,5 +99,33 @@
                 "difficulty": "medium"
             }
         ]
+    },
+    {
+        "id": 4,
+        "title": "Geographie",
+        "teacher": "Professeur Anonyme",
+        "total_questions": 2,
+        "questions": [
+            {
+                "question": "quel est le capita Haiti",
+                "A": "port au prince",
+                "B": "chili",
+                "C": "okap",
+                "D": "okay",
+                "correct": "A",
+                "time": "10s",
+                "difficulty": "medium"
+            },
+            {
+                "question": "quel est le capital du bresil",
+                "A": "Foz",
+                "B": "Brasilia",
+                "C": "jeremi",
+                "D": "Nael",
+                "correct": "B",
+                "time": "10s",
+                "difficulty": "hard"
+            }
+        ]
     }
 ]

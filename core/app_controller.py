@@ -1,7 +1,7 @@
 """
 ===========================================
 TMY Quiz Maker
-Version 5.1
+Version 5.2
 
 app_controller.py
 
@@ -17,6 +17,7 @@ from ui.home import HomePage
 from ui.tmy_generator import TMYGeneratorPage
 from audio.music import stop_music, resume_music
 from ui.play_quiz import PlayQuizPage
+from ui.play_quiz_manuel import PlayQuizManuelPage  # 👈 CÔTÉ ÉLÈVE
 from ui.result import ResultPage
 from ui.quiz_loading import QuizLoadingPage
 from ai.ai_generator import AIGenerator
@@ -50,6 +51,11 @@ class AppController:
 
         self.current_quiz = []
         self.loading_active = False
+
+        # Métadonnées pour la session réseau (Élève / Prof)
+        self.current_student_name = "Élève"
+        self.current_quiz_title = "Quiz en direct"
+        self.current_teacher_name = "Professeur"
 
         # Dictionnaire pour stocker les salons ouverts
         self.active_lobbies = {}
@@ -113,7 +119,7 @@ class AppController:
         print("Lancement du lobby multijoueur")
 
     # =====================================
-    # 🔑 REJOINDRÈ UN QUIZ (ÉLÈVE)
+    # 🔑 REJOINDRE UN QUIZ (ÉLÈVE)
     # =====================================
     def show_join_room(self):
         """Affiche la page complète pour entrer le nom, prénom et le code PIN"""
@@ -135,7 +141,16 @@ class AppController:
         def on_response(data):
             if data.get('success'):
                 result["success"] = True
-                self.root.after(0, lambda: self.show_student_lobby(clean_pin, data.get('title', 'Quiz en direct'), full_name))
+                # Stockage des infos élève & métadonnées du quiz
+                self.current_student_name = full_name
+                self.current_quiz_title = data.get('title', 'Quiz en direct')
+                self.current_teacher_name = data.get('teacher_name', 'Professeur')
+
+                self.root.after(0, lambda: self.show_student_lobby(
+                    clean_pin, 
+                    self.current_quiz_title, 
+                    full_name
+                ))
             else:
                 result["message"] = data.get('message', 'Erreur de connexion.')
             event_done.set()
@@ -182,8 +197,12 @@ class AppController:
                 questions = data.get('questions', [])
                 if questions:
                     self.current_quiz = questions
+                if 'title' in data:
+                    self.current_quiz_title = data['title']
+                if 'teacher_name' in data:
+                    self.current_teacher_name = data['teacher_name']
 
-            # Basculer l'affichage vers la page de jeu
+            # Basculer l'affichage vers la page de jeu manuel pour l'élève
             self.root.after(0, self.start_student_game)
 
         # Enregistrement propre via la fonction de rappel de NetworkClient
@@ -192,48 +211,47 @@ class AppController:
         self.lobby_page.pack(fill="both", expand=True)
 
     def start_student_game(self):
-        """Démarre directement la session de jeu pour l'élève et écoute l'ordre du prof"""
-        print("▶️ Transition vers PlayQuizPage pour l'élève...")
+        """Démarre la session de jeu MANUELLE pour l'élève"""
+        print("▶️ Transition vers PlayQuizManuelPage pour l'élève...")
         self.clear_page()
         stop_music()
 
-        # Si aucune question n'a été reçue, on prévient
-        if not self.current_quiz:
-            print("⚠️ Avertissement : Aucune question trouvée dans self.current_quiz.")
-
-        self.play = PlayQuizPage(
+        # 🎯 Transmissions des métadonnées au composant PlayQuizManuelPage
+        self.play = PlayQuizManuelPage(
             self.root,
-            self.current_quiz,
-            self.show_result
+            network_controller=self.network,
+            titre_quiz=self.current_quiz_title,
+            nom_prof=self.current_teacher_name,
+            nom_eleve=self.current_student_name
         )
         self.play.pack(fill="both", expand=True)
 
-        # -----------------------------------------------------------
-        # ⏭️ ÉCOUTE DE L'ORDRE DU PROFESSEUR POUR PASSER LA QUESTION
-        # -----------------------------------------------------------
+        if self.current_quiz and len(self.current_quiz) > 0:
+            self.play.load_network_question(
+                question_data=self.current_quiz[0],
+                current_index=1,
+                total_questions=len(self.current_quiz)
+            )
+
         def handle_change_question(data):
             new_index = data.get('question_index', 0)
             print(f"📩 Ordre serveur reçu côté élève : passer à l'index {new_index}")
             self.root.after(0, lambda: self.passer_question_suivante_eleve(new_index))
 
-        def handle_quiz_ended(data):
-            print("🏁 Signal de fin du quiz reçu par l'élève !")
-            # Déclencher la fin du jeu pour l'élève si la méthode existe dans PlayQuizPage
-            if hasattr(self.play, 'finish_quiz'):
-                self.root.after(0, self.play.finish_quiz)
-            else:
-                self.root.after(0, self.show_home)
-
+        # Liaison avec le réseau WebSocket
         self.network.on_change_question_callback = handle_change_question
-        self.network.on_quiz_ended_callback = handle_quiz_ended
+        self.network.on_quiz_ended_callback = lambda data=None: self.root.after(0, self.play.afficher_resultats)
 
     def passer_question_suivante_eleve(self, index):
         """Passe la question de l'élève à l'index demandé par le serveur"""
-        if hasattr(self, 'play') and self.play:
-            if hasattr(self.play, 'load_question_by_index'):
-                self.play.load_question_by_index(index)
-            elif hasattr(self.play, 'next_question'):
-                self.play.next_question()
+        if hasattr(self, 'play') and isinstance(self.play, PlayQuizManuelPage):
+            if self.current_quiz and 0 <= index < len(self.current_quiz):
+                question_data = self.current_quiz[index]
+                self.play.load_network_question(
+                    question_data=question_data,
+                    current_index=index + 1,
+                    total_questions=len(self.current_quiz)
+                )
 
     def show_settings(self):
         print("Accès aux Paramètres")
@@ -323,6 +341,7 @@ class AppController:
         """Ouvre la salle d'attente (Lobby) et l'enregistre auprès du serveur WebSocket"""
         self.clear_page()
         self.current_quiz = questions
+        self.current_quiz_title = quiz_title
 
         self.lobby_page = QuizLobbyPage(
             self.root,
@@ -348,7 +367,7 @@ class AppController:
         self.lobby_page.pack(fill="both", expand=True)
 
     # =====================================
-    # 📝 Création manuelle à la maison
+    # 📝 Création manuelle
     # =====================================
     def show_create_manual(self):
         self.clear_page()
@@ -363,10 +382,14 @@ class AppController:
         else:
             print("Erreur : Le fichier ui/manual_quiz.py est introuvable.")
 
-    def on_manual_quiz_created(self, quiz_title="Nouveau Quiz", quiz_data=None):
+    def on_manual_quiz_created(self, quiz_title="Nouveau Quiz", teacher_name="Professeur", quiz_data=None, **kwargs):
+        """
+        Gère la création du quiz manuel en capturant le titre, le nom du professeur et les questions.
+        """
         if quiz_data:
-            save_quiz(quiz_title, quiz_data)
-            print(f"Quiz '{quiz_title}' enregistré localement avec succès !")
+            # Sauvegarde locale incluant le titre, l'auteur et les données du quiz
+            save_quiz(quiz_title, quiz_data, teacher_name=teacher_name)
+            print(f"Quiz '{quiz_title}' créé par {teacher_name} enregistré localement avec succès !")
         
         self.show_my_quizzes()
 
@@ -422,7 +445,7 @@ class AppController:
         self.quiz_loading.pack(fill="both", expand=True)
 
     # =====================================
-    # Affichage du Quiz en cours
+    # Affichage du Quiz en cours (MODE SOLO)
     # =====================================
     def show_play_quiz(self):
         self.clear_page()
@@ -437,7 +460,7 @@ class AppController:
         self.play.pack(fill="both", expand=True)
 
     # =====================================
-    # Écran des Résultats
+    # Écran des Résultats Solo
     # =====================================
     def show_result(
         self,
