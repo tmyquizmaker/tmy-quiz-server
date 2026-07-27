@@ -1,7 +1,7 @@
 """
 ===========================================
 TMY Quiz Maker
-Version 5.2
+Version 5.3
 
 app_controller.py
 
@@ -189,55 +189,73 @@ class AppController:
 
         # Mettre à jour la liste quand un joueur rejoint
         def on_player_joined(data):
-            player_name = data.get('name') if isinstance(data, dict) else data
-            if player_name:
-                self.root.after(0, lambda: self.lobby_page.add_player(player_name))
+            if isinstance(data, dict) and data.get('players'):
+                players_list = data['players']
+                self.root.after(0, lambda p=players_list: self.lobby_page.set_players(p))
 
         self.network.on_player_joined_callback = on_player_joined
 
-        # 🚀 RECEPTION DE L'ÉVÉNEMENT DE DÉMARRAGE DU QUIZ
+        # 🚀 RÉCEPTION DE L'ÉVÉNEMENT DE DÉMARRAGE DU QUIZ
         def handle_start_quiz(data=None):
-            print("🟢 ÉVÉNEMENT REÇU CÔTÉ ÉLÈVE : Lancement du Quiz !")
+            print("🟢 ÉVÉNEMENT REÇU CÔTÉ ÉLÈVE : Lancement du Quiz !", data)
             
-            # Récupération des questions transmises par le serveur si disponibles
+            questions = []
             if isinstance(data, dict):
                 questions = data.get('questions', [])
-                if questions:
-                    self.current_quiz = questions
-                if 'title' in data:
+                if 'title' in data and data['title']:
                     self.current_quiz_title = data['title']
-                if 'teacher_name' in data:
-                    self.current_teacher_name = data['teacher_name']
-                elif 'nom_prof' in data:
-                    self.current_teacher_name = data['nom_prof']
+                
+                # Récupération sécurisée du nom du professeur
+                prof = (
+                    data.get('teacher_name') or 
+                    data.get('nom_prof') or 
+                    data.get('professeur')
+                )
+                if prof:
+                    self.current_teacher_name = prof
 
-            # Basculer l'affichage vers la page de jeu manuel pour l'élève
-            self.root.after(0, self.start_student_game)
+            if questions:
+                self.current_quiz = questions
+
+            # Basculer l'affichage dans le thread Tkinter principal
+            def update_ui():
+                if hasattr(self, 'lobby_page') and self.lobby_page:
+                    self.lobby_page.pack_forget()
+                self.start_student_game(questions_list=questions)
+
+            self.root.after(0, update_ui)
 
         # Enregistrement propre via la fonction de rappel de NetworkClient
         self.network.on_quiz_started_callback = handle_start_quiz
 
         self.lobby_page.pack(fill="both", expand=True)
 
-    def start_student_game(self):
+    def start_student_game(self, questions_list=None):
         """Démarre la session de jeu MANUELLE pour l'élève"""
         print("▶️ Transition vers PlayQuizManuelPage pour l'élève...")
         self.clear_page()
         stop_music()
 
-        # 🎯 Transmissions des métadonnées au composant PlayQuizManuelPage
+        if questions_list:
+            self.current_quiz = questions_list
+
+        # 🎯 Transmission du network_controller + métadonnées
         self.play = PlayQuizManuelPage(
             self.root,
             network_controller=self.network,
             titre_quiz=self.current_quiz_title,
             nom_prof=self.current_teacher_name,
-            nom_eleve=self.current_student_name
+            nom_eleve=self.current_student_name,
+            home_callback=self.show_home
         )
         self.play.pack(fill="both", expand=True)
 
+        # 🚀 Charger immédiatement la première question transmise
         if self.current_quiz and len(self.current_quiz) > 0:
+            first_q = self.current_quiz[0]
+            first_q['teacher_name'] = self.current_teacher_name
             self.play.load_network_question(
-                question_data=self.current_quiz[0],
+                question_data=first_q,
                 current_index=1,
                 total_questions=len(self.current_quiz)
             )
@@ -249,13 +267,15 @@ class AppController:
 
         # Liaison avec le réseau WebSocket
         self.network.on_change_question_callback = handle_change_question
-        self.network.on_quiz_ended_callback = lambda data=None: self.root.after(0, self.play.afficher_resultats)
+        self.network.on_leaderboard_update_callback = lambda data: self.root.after(0, lambda d=data: self.play.mettre_a_jour_classement(d))
+        self.network.on_quiz_ended_callback = lambda data=None: self.root.after(0, lambda d=data: self.play.recevoir_classement_final(d))
 
     def passer_question_suivante_eleve(self, index):
         """Passe la question de l'élève à l'index demandé par le serveur"""
         if hasattr(self, 'play') and isinstance(self.play, PlayQuizManuelPage):
             if self.current_quiz and 0 <= index < len(self.current_quiz):
                 question_data = self.current_quiz[index]
+                question_data['teacher_name'] = self.current_teacher_name
                 self.play.load_network_question(
                     question_data=question_data,
                     current_index=index + 1,
@@ -286,9 +306,19 @@ class AppController:
         print(f"🔴 L'hôte lance le quiz pour la salle PIN: {clean_pin}")
 
         if clean_pin:
-            # On passe le nom du professeur en 3ème argument
-            self.network.start_quiz(clean_pin, self.current_quiz, self.current_teacher_name)
+            # Transmission alignée des 4 arguments : pin, questions, teacher_name, title
+            self.network.start_quiz(
+                clean_pin, 
+                self.current_quiz, 
+                self.current_teacher_name,
+                self.current_quiz_title
+            )
 
+        # Fermer la vue du lobby si elle est ouverte
+        if hasattr(self, 'lobby_page') and self.lobby_page:
+            self.lobby_page.pack_forget()
+
+        self.host_current_question_index = 0
         self.show_host_dashboard()
 
     def show_host_dashboard(self):
@@ -310,16 +340,26 @@ class AppController:
         )
         title_lbl.pack(side="left")
 
-        # ⏭️ BOUTON "QUESTION SUIVANTE" ACCESSIBLE UNIQUEMENT PAR LE PROFESSEUR
-        next_q_btn = ctk.CTkButton(
+        # ⏱ Chrono visible côté prof
+        self.host_timer_lbl = ctk.CTkLabel(
+            header,
+            text="⏱ --s",
+            font=("Arial", 14, "bold"),
+            text_color="#4CC9F0"
+        )
+        self.host_timer_lbl.pack(side="left", padx=20)
+
+        # ⏭️ BOUTON "QUESTION SUIVANTE" — désactivé tant que le chrono n'est pas fini
+        self.next_q_btn = ctk.CTkButton(
             header,
             text="Question Suivante ➔",
             fg_color="#2FA572",
             hover_color="#1E6B49",
             font=("Arial", 14, "bold"),
+            state="disabled",
             command=self.host_click_next_question
         )
-        next_q_btn.pack(side="left", padx=20)
+        self.next_q_btn.pack(side="left", padx=20)
 
         back_btn = ctk.CTkButton(
             header, 
@@ -339,18 +379,60 @@ class AppController:
                 players_data = data.get('players', []) if isinstance(data, dict) else data
                 self.root.after(0, lambda: self.teacher_dashboard.update_dashboard(players_data))
 
+        self.start_host_timer()   # 👈 démarre le chrono pour la question 0
+
     def host_click_next_question(self):
-        """Appelé lorsque le professeur clique sur le bouton Question Suivante"""
+        """Appelé lorsque le professeur clique sur le bouton Question Suivante (actif seulement chrono écoulé)"""
         clean_pin = getattr(self, 'current_active_pin', None)
         if clean_pin:
             print(f"⏭️ Le professeur demande le passage à la question suivante pour la salle [{clean_pin}]")
             self.network.send_next_question(clean_pin)
 
-    def open_quiz_lobby(self, quiz_title, questions):
+        self.host_current_question_index += 1
+
+        if self.current_quiz and self.host_current_question_index < len(self.current_quiz):
+            self.start_host_timer()
+        else:
+            self.next_q_btn.configure(state="disabled", text="🏁 Quiz terminé")
+            self.host_timer_lbl.configure(text="")
+
+    def start_host_timer(self):
+        """Démarre le chrono du prof pour la question en cours et verrouille le bouton Suivant."""
+        if not self.current_quiz or self.host_current_question_index >= len(self.current_quiz):
+            return
+
+        question = self.current_quiz[self.host_current_question_index]
+        time_str = question.get("time", "20s")
+        try:
+            seconds = int("".join(ch for ch in str(time_str) if ch.isdigit()) or 20)
+        except ValueError:
+            seconds = 20
+
+        self.host_remaining_time = seconds
+        self.next_q_btn.configure(state="disabled")
+        self._host_timer_tick()
+
+    def _host_timer_tick(self):
+        """Décompte du chrono prof, tick par seconde."""
+        if not hasattr(self, 'next_q_btn'):
+            return
+
+        if self.host_remaining_time <= 0:
+            self.next_q_btn.configure(state="normal", text="Question Suivante ➔")
+            self.host_timer_lbl.configure(text="✅ Prêt")
+            return
+
+        self.host_timer_lbl.configure(text=f"⏱ {self.host_remaining_time}s")
+        self.next_q_btn.configure(text=f"⏳ Patiente... ({self.host_remaining_time}s)")
+        self.host_remaining_time -= 1
+        self.root.after(1000, self._host_timer_tick)
+
+    def open_quiz_lobby(self, quiz_title, questions, teacher_name="Professeur"):
         """Ouvre la salle d'attente (Lobby) et l'enregistre auprès du serveur WebSocket"""
         self.clear_page()
         self.current_quiz = questions
         self.current_quiz_title = quiz_title
+        self.current_teacher_name = teacher_name  # Capturer le nom du professeur
 
         self.lobby_page = QuizLobbyPage(
             self.root,
@@ -364,12 +446,14 @@ class AppController:
         clean_pin = self.lobby_page.game_pin.replace(" ", "")
         self.current_active_pin = clean_pin
 
-        self.network.create_room(clean_pin, quiz_title)
+        # Créer la salle sur le réseau avec le nom du professeur
+        if hasattr(self.network, 'create_room'):
+            self.network.create_room(clean_pin, quiz_title, teacher_name=teacher_name)
 
         def on_player_joined_remote(data):
-            player = data.get('name') if isinstance(data, dict) else data
-            if player:
-                self.root.after(0, lambda: self.lobby_page.add_player(player))
+            if isinstance(data, dict) and data.get('players'):
+                players_list = data['players']
+                self.root.after(0, lambda p=players_list: self.lobby_page.set_players(p))
 
         self.network.on_player_joined_callback = on_player_joined_remote
 
@@ -396,7 +480,6 @@ class AppController:
         Gère la création du quiz manuel en capturant le titre, le nom du professeur et les questions.
         """
         if quiz_data:
-            # Sauvegarde locale incluant le titre, l'auteur et les données du quiz
             save_quiz(quiz_title, quiz_data, teacher_name=teacher_name)
             print(f"Quiz '{quiz_title}' créé par {teacher_name} enregistré localement avec succès !")
         

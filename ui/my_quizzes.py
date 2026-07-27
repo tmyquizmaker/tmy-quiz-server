@@ -65,6 +65,6 @@ class MyQuizzesPage(ctk.CTkFrame):
             launch_btn = ctk.CTkButton(
                 card, text="▶ LANCER EN CLASSE (LOBBY)", font=("Arial", 12, "bold"),
                 fg_color="#2E7D32", hover_color="#1E4620", height=38,
-                command=lambda q=quiz: self.launch_lobby_callback(q['title'], q['questions'])
+                command=lambda q=quiz: self.launch_lobby_callback(q['title'], q['questions'], q.get('teacher', 'Professeur'))
             )
             launch_btn.pack(side="right", padx=20)

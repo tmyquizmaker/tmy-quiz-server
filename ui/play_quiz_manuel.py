@@ -17,21 +17,26 @@ import ui.fonts as fonts
 
 class PlayQuizManuelPage(ctk.CTkFrame):
 
-    def __init__(self, master, network_controller=None, titre_quiz="Quiz", nom_prof="Professeur", nom_eleve="Élève"):
+    def __init__(self, master, network_controller=None, titre_quiz="Quiz", nom_prof="Professeur", nom_eleve="Élève", title=None, home_callback=None):
         super().__init__(master)
 
         self.network_controller = network_controller
+        self.home_callback = home_callback
 
         # Métadonnées transmises
-        self.titre_quiz = titre_quiz
+        self.titre_quiz = title if title is not None else titre_quiz
         self.nom_prof = nom_prof
         self.nom_eleve = nom_eleve
+        self.home_callback = home_callback
 
-        # Statistiques & État
+        #Statistiques
+
         self.index = 0
         self.total_questions = 1
         self.score = 0
-        self.total_xp = 0
+        self.points_earned = 0
+        self.total_points_possible = 0
+        self.current_question_points = 10
         self.combo = 0
         self.max_combo = 0
 
@@ -43,8 +48,10 @@ class PlayQuizManuelPage(ctk.CTkFrame):
         self.answered = False
         self.selected_choice = None
         self.current_question = None
+        self.resultats_affiches = False
+        self.latest_leaderboard = []
 
-        # Callback pour la fin du quiz (Redirection par défaut vers la page résultat)
+        # Callback pour la fin du quiz
         self.on_quiz_ended_callback = self.afficher_resultats
 
         # Gestion du Chronomètre
@@ -64,19 +71,24 @@ class PlayQuizManuelPage(ctk.CTkFrame):
     # Bruitages
     # =========================================
     def start_sound(self):
-        winsound.Beep(1500, 300)
+        try: winsound.Beep(1500, 300)
+        except Exception: pass
 
     def beep(self):
-        winsound.Beep(1000, 150)
+        try: winsound.Beep(1000, 150)
+        except Exception: pass
 
     def timeout_sound(self):
-        winsound.Beep(500, 600)
+        try: winsound.Beep(500, 600)
+        except Exception: pass
 
     def correct_sound(self):
-        winsound.Beep(1800, 200)
+        try: winsound.Beep(1800, 200)
+        except Exception: pass
 
     def wrong_sound(self):
-        winsound.Beep(350, 400)
+        try: winsound.Beep(350, 400)
+        except Exception: pass
 
     # =========================================
     # Interface
@@ -113,13 +125,13 @@ class PlayQuizManuelPage(ctk.CTkFrame):
         )
         self.combo_label.pack(side="left", padx=(0, 10))
 
-        self.xp_label = ctk.CTkLabel(
+        self.points_label = ctk.CTkLabel(
             self.stats_frame,
-            text="⚡ 0 XP",
+            text="🏆 0/0 pts",
             font=("Arial", 13, "bold"),
             text_color="#FFD700"
         )
-        self.xp_label.pack(side="left")
+        self.points_label.pack(side="left")
 
         # 2. Barre de progression & Chrono
         self.info_bar = ctk.CTkFrame(self.container, fg_color="transparent")
@@ -225,29 +237,26 @@ class PlayQuizManuelPage(ctk.CTkFrame):
         self.status_label.pack(pady=(15, 0))
 
     # =========================================
-    # Chargement Question & Voix
+    # Chargement Question & Séquence Vocale
     # =========================================
     def load_network_question(self, question_data, current_index=1, total_questions=1):
-        stop()
+        try: stop()
+        except Exception: pass
+
         self.timer_running = False
-        
         self.current_question = question_data
         self.index = current_index
         self.total_questions = total_questions
 
-        # Extraction dynamique du nom du professeur s'il est transmis (mis à jour)
         prof_recup = (
             question_data.get("teacher_name") or 
             question_data.get("nom_prof") or 
             question_data.get("prof_name") or 
-            question_data.get("professeur") or 
-            question_data.get("author") or 
-            question_data.get("creator")
+            question_data.get("professeur")
         )
         if prof_recup:
             self.nom_prof = prof_recup
 
-        # Extraction dynamique du titre du quiz s'il est transmis
         titre_recup = question_data.get("titre_quiz") or question_data.get("title")
         if titre_recup:
             self.titre_quiz = titre_recup
@@ -256,67 +265,84 @@ class PlayQuizManuelPage(ctk.CTkFrame):
         self.answered = False
         self.selected_choice = None
 
-        # Mise à jour de l'affichage
         self.counter.configure(text=f"Question {self.index} / {self.total_questions}")
         self.status_label.configure(text="")
 
         time_setting = question_data.get("time") or question_data.get("time_limit") or 20
         try:
-            self.current_time = int(time_setting)
+            digits = "".join(ch for ch in str(time_setting) if ch.isdigit())
+            self.current_time = int(digits) if digits else 20
         except (ValueError, TypeError):
             self.current_time = 20
 
         self.remaining_time = self.current_time
         self.update_timer_display()
 
+        points_setting = question_data.get("points", 10)
+        try:
+            self.current_question_points = int(points_setting)
+        except (ValueError, TypeError):
+            self.current_question_points = 10
+
+        self.total_points_possible += self.current_question_points
+        self.points_label.configure(text=f"🏆 {self.points_earned}/{self.total_points_possible} pts")
+
         texte_question = question_data.get("question", "")
         self.question.configure(text=texte_question)
 
-        # Désactiver les boutons pendant la lecture vocale
+        options = question_data.get("options", {})
+        if isinstance(options, list):
+            options = {lettre: options[i] for i, lettre in enumerate(["A", "B", "C", "D"]) if i < len(options)}
+        elif not isinstance(options, dict):
+            options = {}
+
+        self.parsed_answers = {
+            "A": str(question_data.get("A") or options.get("A", "")),
+            "B": str(question_data.get("B") or options.get("B", "")),
+            "C": str(question_data.get("C") or options.get("C", "")),
+            "D": str(question_data.get("D") or options.get("D", ""))
+        }
+
+        # Masquer les réponses et désactiver les boutons au début de la lecture
         for lettre in ["A", "B", "C", "D"]:
             self.buttons[lettre].configure(text="", state="disabled")
             frame, badge = self.button_frames[lettre]
             frame.configure(fg_color="#1E222D", border_color="#2B303C")
             badge.configure(fg_color="#2B2D42")
 
-        # Préparation des séquences vocales
+        # Préparation des textes pour la lecture séquentielle
         self.audio_cache = {
-            "A": [("Petit A", 0.3), (question_data.get("A", ""), 0.3)],
-            "B": [("Petit B", 0.3), (question_data.get("B", ""), 0.3)],
-            "C": [("Petit C", 0.3), (question_data.get("C", ""), 0.3)],
-            "D": [("Petit D", 0.3), (question_data.get("D", ""), 0.3)]
+            "A": [("A", 0.2), (self.parsed_answers["A"], 0.3)],
+            "B": [("B", 0.2), (self.parsed_answers["B"], 0.3)],
+            "C": [("C", 0.2), (self.parsed_answers["C"], 0.3)],
+            "D": [("D", 0.2), (self.parsed_answers["D"], 0.3)]
         }
 
-        # Démarrer la lecture
+        # ÉTAPE 1 : Lecture de la question
         parler_sequence(
             [(texte_question, 0.3)],
             callback=lambda: self.after(0, self.lire_etape_A)
         )
 
-    # --- Étapes Audio de lecture ---
+    # --- Étapes Audio de lecture progressive ---
     def lire_etape_A(self):
-        if self.answered: return
-        self.buttons["A"].configure(text=self.current_question.get("A", ""))
+        self.buttons["A"].configure(text=self.parsed_answers["A"])
         parler_sequence(self.audio_cache["A"], callback=lambda: self.after(0, self.lire_etape_B))
 
     def lire_etape_B(self):
-        if self.answered: return
-        self.buttons["B"].configure(text=self.current_question.get("B", ""))
+        self.buttons["B"].configure(text=self.parsed_answers["B"])
         parler_sequence(self.audio_cache["B"], callback=lambda: self.after(0, self.lire_etape_C))
 
     def lire_etape_C(self):
-        if self.answered: return
-        self.buttons["C"].configure(text=self.current_question.get("C", ""))
+        self.buttons["C"].configure(text=self.parsed_answers["C"])
         parler_sequence(self.audio_cache["C"], callback=lambda: self.after(0, self.lire_etape_D))
 
     def lire_etape_D(self):
-        if self.answered: return
-        self.buttons["D"].configure(text=self.current_question.get("D", ""))
+        self.buttons["D"].configure(text=self.parsed_answers["D"])
         parler_sequence(self.audio_cache["D"], callback=lambda: self.after(0, self.lire_etape_fin))
 
     def lire_etape_fin(self):
-        if self.answered: return
-        texte_fin = f"Vous disposez de {self.current_time} secondes."
+        texte_fin = f"Vous avez {self.current_time} secondes."
         parler_sequence([(texte_fin, 0)], callback=lambda: self.after(0, self.start_timer))
 
     # =========================================
@@ -324,6 +350,7 @@ class PlayQuizManuelPage(ctk.CTkFrame):
     # =========================================
     def start_timer(self):
         self.start_sound()
+        # Activer les boutons pour permettre la réponse
         for btn in self.buttons.values():
             btn.configure(state="normal")
         self.timer_running = True
@@ -374,6 +401,7 @@ class PlayQuizManuelPage(ctk.CTkFrame):
         self.answered = True
         self.selected_choice = lettre
 
+        # Bloquer les boutons pour éviter les clics multiples
         for l, btn in self.buttons.items():
             btn.configure(state="disabled")
 
@@ -388,20 +416,38 @@ class PlayQuizManuelPage(ctk.CTkFrame):
         if self.network_controller and hasattr(self.network_controller, "send_answer"):
             self.network_controller.send_answer(lettre)
 
+    def get_correct_answer(self):
+        """Récupère dynamiquement la bonne réponse de la question"""
+        if not self.current_question:
+            return "A"
+
+        c = (
+            self.current_question.get("correct") or 
+            self.current_question.get("reponse") or 
+            self.current_question.get("correct_answer") or 
+            self.current_question.get("answer") or
+            "A"
+        )
+        return str(c).strip().upper()
+
     def on_time_out(self):
         """Déclenché automatiquement lorsque le chrono passe à 0"""
-        stop()
+        try: stop()
+        except Exception: pass
         self.timeout_sound()
 
         for btn in self.buttons.values():
             btn.configure(state="disabled")
 
-        bonne = self.current_question.get("correct", "A")
+        bonne = self.get_correct_answer()
 
-        frame_c, badge_c = self.button_frames[bonne]
-        frame_c.configure(fg_color="#1E4620", border_color="#2E7D32")
-        badge_c.configure(fg_color="#2E7D32")
+        # Coloration de la BONNE réponse en Vert
+        if bonne in self.button_frames:
+            frame_c, badge_c = self.button_frames[bonne]
+            frame_c.configure(fg_color="#1E4620", border_color="#2E7D32")
+            badge_c.configure(fg_color="#2E7D32")
 
+        # Analyse du choix de l'élève
         if self.selected_choice is not None:
             if self.selected_choice == bonne:
                 self.correct_sound()
@@ -410,52 +456,98 @@ class PlayQuizManuelPage(ctk.CTkFrame):
                 self.combo += 1
                 self.max_combo = max(self.max_combo, self.combo)
 
-                time_bonus = int((self.remaining_time / max(1, self.current_time)) * 50)
-                combo_bonus = self.combo * 10
-                earned_xp = 100 + time_bonus + combo_bonus
-                self.total_xp += earned_xp
+                self.points_earned += self.current_question_points
 
-                self.status_label.configure(text=f"✅ Bonne réponse ! (+{earned_xp} XP)")
-                parler("Bonne réponse.")
+                self.status_label.configure(text=f"✅ Bonne réponse ! (+{self.current_question_points} points)")
+                
+                try: parler("Bonne réponse.")
+                except Exception: pass
             else:
                 self.wrong_sound()
                 self.mauvaises_reponses += 1
-                frame_w, badge_w = self.button_frames[self.selected_choice]
-                frame_w.configure(fg_color="#4A151B", border_color="#C62828")
-                badge_w.configure(fg_color="#C62828")
+                if self.selected_choice in self.button_frames:
+                    frame_w, badge_w = self.button_frames[self.selected_choice]
+                    frame_w.configure(fg_color="#4A151B", border_color="#C62828")
+                    badge_w.configure(fg_color="#C62828")
                 
                 self.combo = 0
-                self.status_label.configure(text=f"❌ Mauvaise réponse. La bonne était la {bonne}.")
-                parler(f"Mauvaise réponse. La bonne réponse était la {bonne}.")
+                self.status_label.configure(text=f"❌ Mauvaise réponse. La bonne était la [{bonne}].")
+                
+                # La voix parle à la fin et donne la bonne réponse
+                try: parler(f"Mauvaise réponse. La bonne réponse était la {bonne}.")
+                except Exception: pass
         else:
             self.combo = 0
             self.non_repondues += 1
-            self.status_label.configure(text=f"⏰ Temps écoulé ! La réponse était la {bonne}.")
-            parler(f"Temps écoulé. La bonne réponse était la {bonne}.")
+            self.status_label.configure(text=f"⏰ Temps écoulé ! La réponse était la [{bonne}].")
+            
+            # La voix parle si aucune réponse n'a été donnée
+            try: parler(f"Temps écoulé. La bonne réponse était la {bonne}.")
+            except Exception: pass
 
         self.combo_label.configure(text=f"🔥 x{self.combo}")
-        self.xp_label.configure(text=f"⚡ {self.total_xp} XP")
+        self.points_label.configure(text=f"🏆 {self.points_earned}/{self.total_points_possible} pts")
 
-        # 🚀 Si c'est la dernière question, basculer sur l'écran résultat
+        # Mise à jour du score sur le réseau
+        if self.network_controller and hasattr(self.network_controller, "send_score_update"):
+            pin = getattr(self.master, "current_active_pin", "")
+            self.network_controller.send_score_update(pin, self.nom_eleve, self.points_earned)
+
+        # Si c'est la dernière question, on affiche les résultats après quelques secondes
         if self.index >= self.total_questions:
             print("🏁 Dernière question terminée côté élève !")
-            if hasattr(self, 'on_quiz_ended_callback') and self.on_quiz_ended_callback:
-                self.after(3000, self.on_quiz_ended_callback)
+            self.after(3500, self.afficher_resultats)
 
     # =========================================
     # Navigation : Redirection vers ResultElevePage
     # =========================================
+    
+    def mettre_a_jour_classement(self, data):
+        """Reçoit en direct le classement de la salle à chaque score mis à jour."""
+        if isinstance(data, dict):
+            self.latest_leaderboard = data.get('players', [])
+
+    def recevoir_classement_final(self, data):
+        """Reçoit le classement final envoyé par le serveur quand le prof termine le quiz."""
+        if isinstance(data, dict) and data.get('leaderboard'):
+            self.latest_leaderboard = data['leaderboard']
+        self.afficher_resultats()
+
+    def calculer_classement(self):
+        """Calcule le rang de l'élève, le nombre de participants et la moyenne de la salle."""
+        classement = list(self.latest_leaderboard)
+
+        if not any(p.get("name") == self.nom_eleve for p in classement):
+            classement.append({"name": self.nom_eleve, "score": self.points_earned})
+
+        classement_trie = sorted(classement, key=lambda p: p.get("score", 0), reverse=True)
+
+        total_participants = len(classement_trie)
+        rang = next(
+            (i + 1 for i, p in enumerate(classement_trie) if p.get("name") == self.nom_eleve),
+            total_participants
+        )
+
+        scores = [p.get("score", 0) for p in classement_trie]
+        moyenne = round(sum(scores) / len(scores), 1) if scores else 0
+
+        return rang, total_participants, moyenne
+
     def afficher_resultats(self):
-        """Redirige vers l'écran des résultats élèves (ui/result_eleve.py)"""
+        """Redirige vers l'écran des résultats élèves"""
+        if self.resultats_affiches:
+            return
+        self.resultats_affiches = True
+
         try:
             from ui.result_eleve import ResultElevePage
         except ImportError:
             from result_eleve import ResultElevePage
 
-        # Masquer la page du quiz
         self.pack_forget()
 
-        # Instancier et afficher la page de résultats avec les informations du professeur
+        rang, total_participants, moyenne = self.calculer_classement()
+
         page_resultats = ResultElevePage(
             master=self.master,
             titre_quiz=self.titre_quiz,
@@ -463,12 +555,16 @@ class PlayQuizManuelPage(ctk.CTkFrame):
             nom_eleve=self.nom_eleve,
             score=self.score,
             total=self.total_questions,
-            total_xp=self.total_xp,
+            points_earned=self.points_earned,
+            total_points=self.total_points_possible,
             max_combo=self.max_combo,
             average_time=round(self.current_time / max(1, self.total_questions), 1),
             bonnes_reponses=self.bonnes_reponses,
             mauvaises_reponses=self.mauvaises_reponses,
             non_repondues=self.non_repondues,
+            rang=rang,
+            total_participants=total_participants,
+            moyenne_classe=moyenne,
             certificat_callback=lambda: print("Génération du certificat..."),
             home_callback=self.retour_accueil
         )
@@ -477,6 +573,6 @@ class PlayQuizManuelPage(ctk.CTkFrame):
     def retour_accueil(self):
         """Action du bouton Accueil sur la page des résultats"""
         for widget in self.master.winfo_children():
-            widget.pack_forget()
-        if hasattr(self.master, "show_home"):
-            self.master.show_home()
+            widget.destroy()
+        if self.home_callback:
+            self.home_callback()

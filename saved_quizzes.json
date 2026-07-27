@@ -183,5 +183,81 @@
                 "difficulty": "medium"
             }
         ]
+    },
+    {
+        "id": 7,
+        "title": "E Ai",
+        "teacher": "Prof Dubois",
+        "total_questions": 4,
+        "questions": [
+            {
+                "question": "ftubhnk",
+                "A": "htgfd",
+                "B": "reds",
+                "C": "feds",
+                "D": "rfeds",
+                "correct": "A",
+                "time": "10s",
+                "difficulty": "hard"
+            },
+            {
+                "question": "rfds",
+                "A": "gtrfreds",
+                "B": "r4e",
+                "C": "5tre",
+                "D": "rfed",
+                "correct": "B",
+                "time": "20s",
+                "difficulty": "medium"
+            },
+            {
+                "question": "tgrfd",
+                "A": "grfdc",
+                "B": "grfd",
+                "C": "tgrf",
+                "D": "tgrf",
+                "correct": "C",
+                "time": "20s",
+                "difficulty": "medium"
+            },
+            {
+                "question": "htgf",
+                "A": "gtrfdc",
+                "B": "rfeded",
+                "C": "fe",
+                "D": "rfed",
+                "correct": "D",
+                "time": "20s",
+                "difficulty": "medium"
+            }
+        ]
+    },
+    {
+        "id": 8,
+        "title": "Physique",
+        "teacher": "Max Taina",
+        "total_questions": 2,
+        "questions": [
+            {
+                "question": "quel est la formule du poid",
+                "A": "p = mg",
+                "B": "hhd",
+                "C": "hhd",
+                "D": "ss",
+                "correct": "A",
+                "time": "10s",
+                "points": "5"
+            },
+            {
+                "question": "Quel est la formule du travail",
+                "A": "jjdnd",
+                "B": "ddss",
+                "C": "w = F d",
+                "D": "sdfee",
+                "correct": "C",
+                "time": "10s",
+                "points": "25,5"
+            }
+        ]
     }
 ]

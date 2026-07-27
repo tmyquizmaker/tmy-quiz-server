@@ -7524,5 +7524,251 @@
             "difficulty": "easy",
             "time": 20
         }
+    ],
+    [
+        {
+            "question": "Quel est le résultat de l'opération 5 + 3 ? C'est une addition simple pour démarrer ce quiz.",
+            "A": "La somme est 8",
+            "B": "La somme est 7",
+            "C": "La somme est 9",
+            "D": "La somme est 6",
+            "correct": "A",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "Effectuez cette soustraction : 10 - 4. Trouvez la différence entre ces deux nombres.",
+            "A": "La différence est 5",
+            "B": "La différence est 6",
+            "C": "La différence est 7",
+            "D": "La différence est 4",
+            "correct": "B",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "Combien font 2 multiplié par 6 ? C'est un calcul de base de la table de multiplication.",
+            "A": "Le produit est 10",
+            "B": "Le produit est 14",
+            "C": "Le produit est 12",
+            "D": "Le produit est 8",
+            "correct": "C",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "Quel est le résultat de 12 divisé par 3 ? Effectuez une division simple pour trouver le quotient.",
+            "A": "Le quotient est 3",
+            "B": "Le quotient est 4",
+            "C": "Le quotient est 5",
+            "D": "Le quotient est 6",
+            "correct": "B",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "Parmi les nombres suivants : 7, 3, 9, 5, lequel est le plus petit ? Observez-les attentivement.",
+            "A": "Le nombre le plus petit est 7",
+            "B": "Le nombre le plus petit est 3",
+            "C": "Le nombre le plus petit est 9",
+            "D": "Le nombre le plus petit est 5",
+            "correct": "B",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "Identifiez le plus grand nombre dans cette liste : 12, 8, 15, 10. Concentrez-vous bien.",
+            "A": "Le plus grand est 12",
+            "B": "Le plus grand est 8",
+            "C": "Le plus grand est 15",
+            "D": "Le plus grand est 10",
+            "correct": "C",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "Parmi les chiffres 3, 5, 8, 7, lequel est un nombre pair ? Rappelez-vous la définition.",
+            "A": "Le nombre pair est 3",
+            "B": "Le nombre pair est 5",
+            "C": "Le nombre pair est 8",
+            "D": "Le nombre pair est 7",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quelle est la suite logique de cette série de nombres : 2, 4, 6, ? Trouvez le prochain terme.",
+            "A": "Le prochain nombre est 7",
+            "B": "Le prochain nombre est 8",
+            "C": "Le prochain nombre est 9",
+            "D": "Le prochain nombre est 10",
+            "correct": "B",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "J'ai 3 pommes et j'en achète 2 de plus. Combien de pommes ai-je au total maintenant ? Calculez.",
+            "A": "Vous avez 5 pommes",
+            "B": "Vous avez 4 pommes",
+            "C": "Vous avez 6 pommes",
+            "D": "Vous avez 7 pommes",
+            "correct": "A",
+            "difficulty": "easy",
+            "time": 20
+        },
+        {
+            "question": "Il y avait 7 oiseaux sur un arbre, et 3 se sont envolés. Combien d'oiseaux reste-t-il sur l'arbre ?",
+            "A": "Il reste 3 oiseaux",
+            "B": "Il reste 5 oiseaux",
+            "C": "Il reste 4 oiseaux",
+            "D": "Il reste 2 oiseaux",
+            "correct": "C",
+            "difficulty": "easy",
+            "time": 20
+        }
+    ],
+    [
+        {
+            "question": "Quelle dynastie chinoise a construit la majeure partie de la Grande Muraille de Chine telle que nous la connaissons aujourd'hui?",
+            "A": "La dynastie Han",
+            "B": "La dynastie Qin",
+            "C": "La dynastie Ming",
+            "D": "La dynastie Tang",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quel événement historique majeur marque traditionnellement la fin du Moyen Âge et le début de l'Époque moderne en Europe?",
+            "A": "La découverte de l'Amérique",
+            "B": "La chute de Constantinople",
+            "C": "La Réforme protestante",
+            "D": "La Guerre de Cent Ans",
+            "correct": "B",
+            "difficulty": "medium",
+            "time": 25
+        },
+        {
+            "question": "Quel traité a officiellement mis fin à la Première Guerre mondiale et imposé de lourdes sanctions à l'Allemagne?",
+            "A": "Le traité de Trianon",
+            "B": "Le traité de Sèvres",
+            "C": "Le traité de Versailles",
+            "D": "Le traité de Saint-Germain-en-Laye",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Qui était le chef des forces révolutionnaires bolchéviques lors de la Révolution d'Octobre en Russie en 1917?",
+            "A": "Joseph Staline",
+            "B": "Léon Trotsky",
+            "C": "Vladimir Lénine",
+            "D": "Nicolas II",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        }
+    ],
+    [
+        {
+            "question": "Quel traité, signé en 1825, a contraint Haïti à verser une indemnité colossale à la France pour sa reconnaissance ?",
+            "A": "Traité de Port-au-Prince",
+            "B": "Ordonnance de Charles X",
+            "C": "Pacte de Pétionville",
+            "D": "Convention de Jérémie",
+            "correct": "B",
+            "difficulty": "hard",
+            "time": 30
+        },
+        {
+            "question": "Quel lwa est traditionnellement associé à la mort et aux cimetières dans le panthéon du vodou haïtien ?",
+            "A": "Ogoun Ferraille",
+            "B": "Erzulie Dantor",
+            "C": "Baron Samedi",
+            "D": "Damballah Wèdo",
+            "correct": "C",
+            "difficulty": "hard",
+            "time": 25
+        },
+        {
+            "question": "Quel écrivain haïtien est l'auteur du roman emblématique « Gouverneurs de la rosée », publié en 1944 ?",
+            "A": "Jacques Roumain",
+            "B": "René Depestre",
+            "C": "Lyonel Trouillot",
+            "D": "Dany Laferrière",
+            "correct": "A",
+            "difficulty": "hard",
+            "time": 25
+        },
+        {
+            "question": "Sous le régime de François Duvalier, quel corps paramilitaire redouté était chargé de maintenir l'ordre et la terreur ?",
+            "A": "Les Léopards",
+            "B": "Les FADH",
+            "C": "Les Tontons Macoutes",
+            "D": "La Garde Présidentielle",
+            "correct": "C",
+            "difficulty": "hard",
+            "time": 25
+        },
+        {
+            "question": "Quelle chaîne de montagnes traverse le sud d'Haïti et abrite le plus haut sommet du pays, le Pic la Selle ?",
+            "A": "Massif de la Hotte",
+            "B": "Chaîne de la Selle",
+            "C": "Montagnes Noires",
+            "D": "Chaîne des Matheux",
+            "correct": "B",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Avant la déforestation massive, quelle culture agricole était historiquement le principal moteur économique d'Haïti ?",
+            "A": "Le café",
+            "B": "La canne à sucre",
+            "C": "Le cacao",
+            "D": "Le sisal",
+            "correct": "B",
+            "difficulty": "hard",
+            "time": 30
+        },
+        {
+            "question": "Quel centre d'art, fondé en 1944 à Port-au-Prince, est devenu un foyer majeur pour l'art populaire haïtien ?",
+            "A": "Centre d'Art Haïtien",
+            "B": "Atelier Saint-Soleil",
+            "C": "Le Foyer des Arts",
+            "D": "Académie de Beaux-Arts",
+            "correct": "A",
+            "difficulty": "hard",
+            "time": 25
+        },
+        {
+            "question": "Quel général de la Révolution haïtienne s'est autoproclamé empereur d'Haïti sous le nom de Jacques Ier en 1805 ?",
+            "A": "Toussaint Louverture",
+            "B": "Jean-Jacques Dessalines",
+            "C": "Henri Christophe",
+            "D": "Alexandre Pétion",
+            "correct": "B",
+            "difficulty": "hard",
+            "time": 20
+        },
+        {
+            "question": "Dans quelle ville haïtienne a été proclamée la Déclaration d'Indépendance par Jean-Jacques Dessalines le 1er janvier 1804 ?",
+            "A": "Cap-Haïtien",
+            "B": "Léogâne",
+            "C": "Gonaïves",
+            "D": "Port-au-Prince",
+            "correct": "C",
+            "difficulty": "hard",
+            "time": 20
+        },
+        {
+            "question": "Quel monument historique haïtien, situé dans le Nord, fut le palais royal d'Henri Christophe et est classé à l'UNESCO ?",
+            "A": "La Citadelle Laferrière",
+            "B": "Le Palais Sans Souci",
+            "C": "Le Fort Jacques",
+            "D": "Le Mupanah",
+            "correct": "B",
+            "difficulty": "hard",
+            "time": 25
+        }
     ]
 ]

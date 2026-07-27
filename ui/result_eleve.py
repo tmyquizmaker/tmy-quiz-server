@@ -1,258 +1,288 @@
 """
 ===========================================
 TMY Quiz Maker
-Version 4.1
+Version 5.3
 
-result_eleve.py
-Écran résultat pour les Élèves avec informations 
-du prof, du quiz et de l'étudiant.
+result_eleve.py - Écran de Résultats Ajusté
 ===========================================
 """
 
-import os
-from datetime import datetime
 import customtkinter as ctk
-from PIL import Image
+from datetime import datetime
+import tkinter.messagebox as messagebox
 
-from ui.colors import *
-from ui.buttons import LargeButton
+import ui.colors as colors
 import ui.fonts as fonts
 
 
 class ResultElevePage(ctk.CTkFrame):
 
-    def __init__(
-        self,
-        master,
-        # Infos Dynamiques (Quiz / Prof / Élève)
-        titre_quiz="Maître du Savoir",
-        nom_prof="Prof. Max Junior",
-        nom_eleve="Max Student",
-        date_quiz=None,
-        # Statistiques
-        score=2,
-        total=3,
-        total_xp=1788,
-        max_combo=2,
-        average_time=2.3,
-        bonnes_reponses=2,
-        mauvaises_reponses=1,
-        non_repondues=0,
-        # Callbacks
-        certificat_callback=None,
-        home_callback=None,
-        **kwargs
-    ):
-        super().__init__(master, **kwargs)
+    def __init__(self, master, titre_quiz="Quiz", nom_prof="Professeur", nom_eleve="Élève",
+                 score=0, total=1, points_earned=0, total_points=0, max_combo=0, average_time=0.0,
+                 bonnes_reponses=0, mauvaises_reponses=0, non_repondues=0,
+                 rang=None, total_participants=None, moyenne_classe=0,
+                 certificat_callback=None, share_callback=None, home_callback=None):
+        super().__init__(master)
 
-        self.home_callback = home_callback
-        self.certificat_callback = certificat_callback
+        self.master = master
+        self.titre_quiz = titre_quiz
+        self.nom_prof = nom_prof
+        self.nom_eleve = nom_eleve
+        self.score = score
+        self.total = max(1, total)
+        self.points_earned = points_earned
+        self.total_points = total_points
+        self.max_combo = max_combo
+        self.rang = rang
+        self.total_participants = total_participants
+        self.moyenne_classe = moyenne_classe
+        self.average_time = average_time
+        self.bonnes_reponses = bonnes_reponses
+        self.mauvaises_reponses = mauvaises_reponses
+        self.non_repondues = non_repondues
 
-        # Date automatique si non fournie
-        if not date_quiz:
-            date_quiz = datetime.now().strftime("%d %b %Y")
+        # Callbacks des boutons
+        self.certificat_callback = certificat_callback or self.defaut_telecharger
+        self.share_callback = share_callback or self.defaut_partager
+        self.home_callback = home_callback or self.defaut_accueil
 
-        self.configure(fg_color="#090D16")  # Fond très sombre
+        self.percentage = int((self.score / self.total) * 100)
 
-        # ---------------------------------------------------------
-        # CREATION DU CONTENEUR PRINCIPAL
-        # ---------------------------------------------------------
-        self.main_container = ctk.CTkScrollableFrame(
-            self,
-            fg_color="transparent",
-            corner_radius=0
-        )
-        self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
+        self.configure(fg_color="#0F111A")
 
-        # ---------------------------------------------------------
-        # LOGIQUE DES MENTIONS ET STICKERS SELON LE SCORE
-        # ---------------------------------------------------------
-        pourcentage = int((score / total) * 100) if total > 0 else 0
+        self.scroll_container = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.scroll_container.pack(expand=True, fill="both", padx=20, pady=20)
 
-        if pourcentage < 50:
-            mention = "INSUFFISANT !"
-            titre_rank = "🌱 Insuffisant"
-            message = "Les connaissances évaluées ne sont pas encore acquises.\nUn travail plus régulier et des révisions approfondies sont nécessaires pour progresser."
-            conseil_perf = "Ne décourage pas !\nRévise le cours et réessaie."
-            rank_color = "#FF5252"  # Rouge
-            sticker = "🌱"
-        elif pourcentage < 80:
-            mention = "SATISFAISANT !"
-            titre_rank = "🔥 Satisfaisant"
-            message = "Les objectifs principaux sont globalement atteints.\nDes efforts supplémentaires permettront de consolider les acquis et d'améliorer les résultats."
-            conseil_perf = "Bon travail !\nEncore un petit effort pour l'excellence."
-            rank_color = "#2196F3"  # Bleu
-            sticker = "🔥"
+        self.create_interface()
+
+    # =========================================
+    # Actions par défaut
+    # =========================================
+    def defaut_telecharger(self):
+        messagebox.showinfo("Téléchargement", f"Téléchargement du résultat pour {self.nom_eleve}...")
+
+    def defaut_partager(self):
+        texte = f"🏆 J'ai obtenu {self.score}/{self.total} ({self.percentage}%) au quiz '{self.titre_quiz}' sur TMY Quiz Maker !"
+        self.clipboard_clear()
+        self.clipboard_append(texte)
+        messagebox.showinfo("Partage", "Résultat copié dans le presse-papier !")
+
+    def defaut_accueil(self):
+        for widget in self.master.winfo_children():
+            widget.pack_forget()
+        if hasattr(self.master, "show_home"):
+            self.master.show_home()
+
+    # =========================================
+    # Mentions & Stickers Dynamiques
+    # =========================================
+    def get_appreciation(self):
+        if self.percentage >= 80:
+            return (
+                "EXCELLENT !",
+                "« Excellent travail. Les compétences évaluées sont maîtrisées avec assurance. Continuez sur cette voie. »",
+                "#00E676",
+                "👑"
+            )
+        elif self.percentage >= 50:
+            return (
+                "SATISFAISANT !",
+                "« Les objectifs principaux sont globalement atteints. Des efforts supplémentaires permettront de consolider les acquis et d'améliorer les résultats. »",
+                "#FF9800",
+                "👍"
+            )
         else:
-            mention = "EXCELLENT !"
-            titre_rank = "👑 Excellent"
-            message = "Excellente maîtrise du sujet !\nLes compétences et connaissances évaluées sont parfaitement acquises."
-            conseil_perf = "Félicitations !\nTu maîtrises parfaitement le sujet."
-            rank_color = "#00E676"  # Vert
-            sticker = "👑"
+            return (
+                "INSUFFISANT !",
+                "« Les connaissances évaluées ne sont pas encore acquises. Un travail plus régulier et des révisions approfondies sont nécessaires pour progresser. »",
+                "#FF5252",
+                "🌱"
+            )
 
-        # ---------------------------------------------------------
-        # 1. BARRE SUPERIEURE : INFOS DU QUIZ & ÉLÈVE
-        # ---------------------------------------------------------
-        self.header_info = ctk.CTkFrame(
-            self.main_container, 
-            fg_color="#111726", 
-            corner_radius=12,
-            border_width=1,
-            border_color="#1E293B"
-        )
-        self.header_info.pack(fill="x", pady=(0, 15), ipady=5)
+    # =========================================
+    # Interface
+    # =========================================
+    def create_interface(self):
+        title_text, desc_text, title_color, sticker_icon = self.get_appreciation()
 
-        # Logo
-        logo_path = os.path.join("assets", "logo.png")
-        self.logo_img = None
-        if os.path.exists(logo_path):
-            try:
-                pil_img = Image.open(logo_path)
-                self.logo_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(50, 50))
-            except Exception as e:
-                print("Erreur logo:", e)
+        # 1. En-tête : Métadonnées du Quiz
+        header_card = ctk.CTkFrame(self.scroll_container, fg_color="#181B26", corner_radius=12, border_width=1, border_color="#242838")
+        header_card.pack(fill="x", pady=(0, 15), ipady=10, ipadx=15)
 
-        if self.logo_img:
-            ctk.CTkLabel(self.header_info, image=self.logo_img, text="").pack(side="left", padx=15)
+        for i in range(4):
+            header_card.columnconfigure(i, weight=1)
 
-        info_grid = ctk.CTkFrame(self.header_info, fg_color="transparent")
-        info_grid.pack(side="left", expand=True, fill="x", padx=10)
-        info_grid.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        self.add_meta_item(header_card, 0, "💻 TITRE DU QUIZ", self.titre_quiz, "#4CC9F0")
+        self.add_meta_item(header_card, 1, "👤 PROFESSEUR", self.nom_prof, "#00E676")
+        self.add_meta_item(header_card, 2, "🎓 ÉTUDIANT", self.nom_eleve, "#FFD700")
+        self.add_meta_item(header_card, 3, "📅 DATE DU QUIZ", datetime.now().strftime("%d %b %Y"), "#B57EDC")
 
-        self._add_header_item(info_grid, "📖", "TITRE DU QUIZ", titre_quiz, "#2196F3", 0)
-        self._add_header_item(info_grid, "🎓", "PROFESSEUR", nom_prof, "#00E676", 1)
-        self._add_header_item(info_grid, "👤", "ÉTUDIANT", nom_eleve, "#FFD700", 2)
-        self._add_header_item(info_grid, "📅", "DATE DU QUIZ", date_quiz, "#A855F7", 3)
+        # 2. Bannière de résultat (Centrée et aérée)
+        banner_card = ctk.CTkFrame(self.scroll_container, fg_color="#181B26", corner_radius=16, border_width=1, border_color="#242838")
+        banner_card.pack(fill="x", pady=(0, 15), ipady=20, ipadx=20)
 
-        if self.logo_img:
-            ctk.CTkLabel(self.header_info, image=self.logo_img, text="").pack(side="right", padx=15)
+        left_banner = ctk.CTkFrame(banner_card, fg_color="transparent")
+        left_banner.pack(side="left", fill="both", expand=True, padx=10)
 
-        # ---------------------------------------------------------
-        # 2. CARTE BANNIÈRE : MENTION & STICKER
-        # ---------------------------------------------------------
-        self.banner_card = ctk.CTkFrame(
-            self.main_container, 
-            fg_color="#0F172A", 
-            corner_radius=15, 
-            border_width=1, 
-            border_color="#1E293B"
-        )
-        self.banner_card.pack(fill="x", pady=(0, 15), ipady=15)
-
-        text_banner = ctk.CTkFrame(self.banner_card, fg_color="transparent")
-        text_banner.pack(side="left", expand=True, fill="both", padx=30)
-
+        ctk.CTkLabel(left_banner, text="🎖️ QUIZ TERMINÉ !", font=("Arial", 11, "bold"), text_color="#A0AABF").pack(anchor="w")
+        ctk.CTkLabel(left_banner, text=title_text, font=("Arial", 28, "bold"), text_color=title_color).pack(anchor="w", pady=(2, 6))
+        
         ctk.CTkLabel(
-            text_banner, 
-            text="🏆 QUIZ TERMINÉ !", 
-            font=("Arial", 12, "bold"), 
-            text_color="#94A3B8"
-        ).pack(anchor="w", pady=(5, 0))
-
-        # Affichage de la Mention à la place de "FÉLICITATIONS !"
-        ctk.CTkLabel(
-            text_banner, 
-            text=mention, 
-            font=("Arial", 26, "bold"), 
-            text_color=rank_color
+            left_banner,
+            text=desc_text,
+            font=("Arial", 12, "italic"),
+            text_color="#A0AABF",
+            wraplength=650,
+            justify="left"
         ).pack(anchor="w")
 
-        ctk.CTkLabel(
-            text_banner, 
-            text=message, 
-            font=("Arial", 13), 
-            text_color="#94A3B8"
-        ).pack(anchor="w")
+        # Badge Sticker
+        sticker_badge = ctk.CTkLabel(
+            banner_card,
+            text=sticker_icon,
+            font=("Segoe UI Emoji", 40),
+            width=85,
+            height=85,
+            fg_color="#242838",
+            corner_radius=42
+        )
+        sticker_badge.pack(side="right", padx=15)
 
-        # Badge Visuel avec STICKER adapté
-        badge_frame = ctk.CTkFrame(self.banner_card, fg_color="#1E293B", width=80, height=80, corner_radius=40)
-        badge_frame.pack(side="right", padx=30)
-        badge_frame.pack_propagate(False)
-        ctk.CTkLabel(badge_frame, text=sticker, font=("Segoe UI Emoji", 38)).pack(expand=True)
+        # 3. Statistiques principales (4 Colonnes)
+        stats_frame = ctk.CTkFrame(self.scroll_container, fg_color="transparent")
+        stats_frame.pack(fill="x", pady=(0, 15))
+        for i in range(4):
+            stats_frame.columnconfigure(i, weight=1)
 
-        # ---------------------------------------------------------
-        # 3. GRILLE DE STATISTIQUES (2x2)
-        # ---------------------------------------------------------
-        self.stats_grid = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self.stats_grid.pack(fill="x", pady=(0, 15))
-        self.stats_grid.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        self.add_stat_card(stats_frame, 0, "🎯 SCORE FINAL", f"{self.score}/{self.total}", f"Précision : {self.percentage}%", "#1F6AA5", "#4CC9F0")
+        self.add_stat_card(stats_frame, 1, "🏆 POINTS", f"{self.points_earned}/{self.total_points}", "Points obtenus", "#FFD700", "#FFD700")
+        self.add_stat_card(stats_frame, 2, "🔥 MEILLEUR COMBO", f"x{self.max_combo}", "Série de réponses", "#FF9800", "#FF9800")
+        self.add_stat_card(stats_frame, 3, "⏱ TEMPS MOYEN", f"{self.average_time}s", "Par question", "#00E676", "#00E676")
 
-        self.create_stat_card(self.stats_grid, "🎯 SCORE FINAL", f"{score}/{total}", f"Précision : {pourcentage}%", "#2196F3", 0)
-        self.create_stat_card(self.stats_grid, "⚡ POINTS XP", f"+{total_xp}", "XP Gagnés", "#FFD700", 1)
-        self.create_stat_card(self.stats_grid, "🔥 MEILLEUR COMBO", f"x{max_combo}", "Série de réponses", "#FF7A00", 2)
-        self.create_stat_card(self.stats_grid, "⏱️ TEMPS MOYEN", f"{average_time}s", "Par question", "#00E676", 3)
+        # 4. Section centrale
+        middle_frame = ctk.CTkFrame(self.scroll_container, fg_color="transparent")
+        middle_frame.pack(fill="x", pady=(0, 20))
+        middle_frame.columnconfigure(0, weight=1)
+        middle_frame.columnconfigure(1, weight=1)
 
-        # ---------------------------------------------------------
-        # 4. PANNEAUX BAS (PERFORMANCE + RÉCAPITULATIF)
-        # ---------------------------------------------------------
-        self.bottom_grid = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        self.bottom_grid.pack(fill="x", pady=(0, 15))
-        self.bottom_grid.grid_columnconfigure((0, 1), weight=1)
+        # Carte Gauche : Classement de la salle
+        perf_card = ctk.CTkFrame(middle_frame, fg_color="#181B26", corner_radius=16, border_width=1, border_color="#242838")
+        perf_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), ipady=20, ipadx=15)
 
-        # Panel Gauche : Performance
-        self.perf_card = ctk.CTkFrame(self.bottom_grid, fg_color="#111726", corner_radius=12)
-        self.perf_card.grid(row=0, column=0, padx=(0, 8), sticky="nsew", ipady=10)
+        ctk.CTkLabel(perf_card, text="🏆 CLASSEMENT DE LA SALLE", font=("Arial", 12, "bold"), text_color="#A0AABF").pack(anchor="w", pady=(0, 15))
 
-        ctk.CTkLabel(self.perf_card, text="📈 PERFORMANCE GLOBALE", font=("Arial", 12, "bold"), text_color="#94A3B8").pack(anchor="w", padx=15, pady=10)
-        
-        perf_sub = ctk.CTkFrame(self.perf_card, fg_color="transparent")
-        perf_sub.pack(fill="x", padx=15)
-        
-        # Circle Score
-        circle = ctk.CTkFrame(perf_sub, fg_color="#1E293B", width=70, height=70, corner_radius=35)
-        circle.pack(side="left", padx=(0, 15))
-        circle.pack_propagate(False)
-        ctk.CTkLabel(circle, text=f"{pourcentage}%", font=("Arial", 16, "bold"), text_color=rank_color).pack(expand=True)
+        perf_body = ctk.CTkFrame(perf_card, fg_color="transparent")
+        perf_body.pack(fill="both", expand=True)
 
-        perf_txt = ctk.CTkFrame(perf_sub, fg_color="transparent")
-        perf_txt.pack(side="left", fill="both", expand=True)
-        ctk.CTkLabel(perf_txt, text=titre_rank, font=("Arial", 14, "bold"), text_color=rank_color).pack(anchor="w")
-        ctk.CTkLabel(perf_txt, text=conseil_perf, font=("Arial", 11), text_color="#94A3B8", justify="left").pack(anchor="w")
+        perf_center = ctk.CTkFrame(perf_body, fg_color="transparent")
+        perf_center.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Panel Droit : Récapitulatif
-        self.recap_card = ctk.CTkFrame(self.bottom_grid, fg_color="#111726", corner_radius=12)
-        self.recap_card.grid(row=0, column=1, padx=(8, 0), sticky="nsew", ipady=10)
+        rang_suffix = "er" if self.rang == 1 else "ème"
+        rang_texte = f"{self.rang}{rang_suffix}" if self.rang else "--"
 
-        ctk.CTkLabel(self.recap_card, text="📊 RÉCAPITULATIF DES RÉPONSES", font=("Arial", 12, "bold"), text_color="#94A3B8").pack(anchor="w", padx=15, pady=10)
-        
-        self._add_recap_line(self.recap_card, "✅ Bonnes réponses", bonnes_reponses, "#00E676")
-        self._add_recap_line(self.recap_card, "❌ Mauvaises réponses", mauvaises_reponses, "#FF5252")
-        self._add_recap_line(self.recap_card, "➖ Non répondues", non_repondues, "#2196F3")
+        badge_rang = ctk.CTkLabel(
+            perf_center,
+            text=rang_texte,
+            font=("Arial", 20, "bold"),
+            text_color=title_color,
+            width=75,
+            height=75,
+            fg_color="#242838",
+            corner_radius=37
+        )
+        badge_rang.pack(side="left", padx=(0, 15))
 
-        # ---------------------------------------------------------
-        # 5. BOUTON ACTION : TÉLÉCHARGER CERTIFICAT
-        # ---------------------------------------------------------
-        self.cert_btn = ctk.CTkButton(
-            self.main_container,
-            text="🎖️ TÉLÉCHARGER LE CERTIFICAT\nObtiens ton certificat de réussite",
-            font=("Arial", 14, "bold"),
-            height=50,
-            fg_color="#1D4ED8",
-            hover_color="#1E40AF",
+        perf_info = ctk.CTkFrame(perf_center, fg_color="transparent")
+        perf_info.pack(side="left")
+
+        total_txt = self.total_participants if self.total_participants else "?"
+        ctk.CTkLabel(perf_info, text=f"sur {total_txt} participants", font=("Arial", 14, "bold"), text_color="#FFFFFF").pack(anchor="w")
+        ctk.CTkLabel(perf_info, text=f"Moyenne de la salle : {self.moyenne_classe} pts", font=("Arial", 11), text_color="#8A8F9E").pack(anchor="w", pady=(4, 0))
+
+        # Carte Droite : Récapitulatif
+        recap_card = ctk.CTkFrame(middle_frame, fg_color="#181B26", corner_radius=16, border_width=1, border_color="#242838")
+        recap_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0), ipady=20, ipadx=15)
+
+        ctk.CTkLabel(recap_card, text="📋 RÉCAPITULATIF DES RÉPONSES", font=("Arial", 12, "bold"), text_color="#A0AABF").pack(anchor="w", pady=(0, 15))
+
+        # Zone qui occupe tout l'espace restant de la carte
+        recap_body = ctk.CTkFrame(recap_card, fg_color="transparent")
+        recap_body.pack(fill="both", expand=True)
+
+        # Centrage garanti (horizontal + vertical) via place()
+        recap_center = ctk.CTkFrame(recap_body, fg_color="transparent")
+        recap_center.place(relx=0.5, rely=0.5, anchor="center")
+
+        self.add_recap_row(recap_center, "☑  Bonnes réponses", str(self.bonnes_reponses), "#00E676")
+        self.add_recap_row(recap_center, "✖  Mauvaises réponses", str(self.mauvaises_reponses), "#FF5252")
+        self.add_recap_row(recap_center, "➖  Non répondues", str(self.non_repondues), "#4CC9F0")
+
+        # 5. Les 3 boutons du bas
+        action_bar = ctk.CTkFrame(self.scroll_container, fg_color="transparent")
+        action_bar.pack(fill="x", pady=(10, 5))
+
+        action_bar.columnconfigure(0, weight=1)
+        action_bar.columnconfigure(1, weight=1)
+        action_bar.columnconfigure(2, weight=1)
+
+        btn_download = ctk.CTkButton(
+            action_bar,
+            text="📥 TÉLÉCHARGER LE RÉSULTAT",
+            font=("Arial", 13, "bold"),
+            fg_color="#1F6AA5",
+            hover_color="#144970",
+            height=48,
+            corner_radius=10,
             command=self.certificat_callback
         )
-        self.cert_btn.pack(fill="x", pady=(10, 0))
+        btn_download.grid(row=0, column=0, padx=(0, 6), sticky="ew")
 
-    def _add_header_item(self, parent, icon, title, val, color, col):
+        btn_share = ctk.CTkButton(
+            action_bar,
+            text="🔗 PARTAGER LE RÉSULTAT",
+            font=("Arial", 13, "bold"),
+            fg_color="#2E7D32",
+            hover_color="#1B5E20",
+            height=48,
+            corner_radius=10,
+            command=self.share_callback
+        )
+        btn_share.grid(row=0, column=1, padx=6, sticky="ew")
+
+        btn_home = ctk.CTkButton(
+            action_bar,
+            text="🏠 RETOUR À L'ACCUEIL",
+            font=("Arial", 13, "bold"),
+            fg_color="#37474F",
+            hover_color="#263238",
+            height=48,
+            corner_radius=10,
+            command=self.home_callback
+        )
+        btn_home.grid(row=0, column=2, padx=(6, 0), sticky="ew")
+
+    # =========================================
+    # Helpers
+    # =========================================
+    def add_meta_item(self, parent, col, title, value, color):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.grid(row=0, column=col, sticky="ew")
-        ctk.CTkLabel(frame, text=f"{icon} {title}", font=("Arial", 9, "bold"), text_color="#64748B").pack(anchor="w")
-        ctk.CTkLabel(frame, text=val, font=("Arial", 12, "bold"), text_color=color).pack(anchor="w")
+        frame.grid(row=0, column=col, sticky="ew", padx=10)
+        ctk.CTkLabel(frame, text=title, font=("Arial", 10, "bold"), text_color="#A0AABF").pack(anchor="w")
+        ctk.CTkLabel(frame, text=value, font=("Arial", 14, "bold"), text_color=color).pack(anchor="w", pady=(2, 0))
 
-    def create_stat_card(self, parent, title, value, sub_text, color, col):
-        card = ctk.CTkFrame(parent, fg_color="#111726", corner_radius=10, border_width=1, border_color="#1E293B")
-        card.grid(row=0, column=col, padx=4, sticky="nsew")
+    def add_stat_card(self, parent, col, title, main_val, sub_val, border_col, text_col):
+        card = ctk.CTkFrame(parent, fg_color="#181B26", corner_radius=12, border_width=1, border_color="#242838")
+        card.grid(row=0, column=col, sticky="nsew", padx=4, ipady=10)
 
-        accent = ctk.CTkFrame(card, fg_color=color, height=3, corner_radius=2)
-        accent.pack(fill="x", side="top", padx=8, pady=(6, 0))
+        top_bar = ctk.CTkFrame(card, fg_color=border_col, height=3, corner_radius=2)
+        top_bar.pack(fill="x", padx=15, pady=(8, 10))
 
-        ctk.CTkLabel(card, text=title, font=("Arial", 10, "bold"), text_color="#64748B").pack(pady=(6, 2))
-        ctk.CTkLabel(card, text=value, font=("Arial", 20, "bold"), text_color=color).pack(pady=0)
-        ctk.CTkLabel(card, text=sub_text, font=("Arial", 10), text_color="#475569").pack(pady=(0, 6))
+        ctk.CTkLabel(card, text=title, font=("Arial", 10, "bold"), text_color="#A0AABF").pack()
+        ctk.CTkLabel(card, text=main_val, font=("Arial", 22, "bold"), text_color=text_col).pack(pady=(4, 2))
+        ctk.CTkLabel(card, text=sub_val, font=("Arial", 11), text_color="#6C728F").pack()
 
-    def _add_recap_line(self, parent, label, val, color):
-        line = ctk.CTkFrame(parent, fg_color="transparent")
-        line.pack(fill="x", padx=15, pady=2)
-        ctk.CTkLabel(line, text=label, font=("Arial", 11), text_color="#CBD5E1").pack(side="left")
-        ctk.CTkLabel(line, text=str(val), font=("Arial", 11, "bold"), text_color=color).pack(side="right")
+    def add_recap_row(self, parent, label, count, color):
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(fill="x", pady=4)
+        ctk.CTkLabel(row, text=label, font=("Arial", 13), text_color="#FFFFFF").pack(side="left")
+        ctk.CTkLabel(row, text=count, font=("Arial", 14, "bold"), text_color=color).pack(side="right")

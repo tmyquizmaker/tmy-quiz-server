@@ -10,9 +10,26 @@ from flask_socketio import SocketIO, emit, join_room
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Dictionnaire des salons actifs : 
+# Dictionnaire des salons actifs :
 # { "PIN": {"title": str, "players": [str], "questions": [], "current_question": 0, "teacher_name": str} }
 active_lobbies = {}
+
+def build_leaderboard(lobby):
+    """Construit le classement en incluant TOUS les joueurs de la salle,
+    même ceux qui n'ont pas encore répondu (score 0 par défaut)."""
+    scores = lobby.get("scores", {})
+    noms = list(lobby.get("players", []))
+
+    for nom_deja_note in scores.keys():
+        if nom_deja_note not in noms:
+            noms.append(nom_deja_note)
+
+    classement = sorted(
+        [{"name": n, "score": scores.get(n, 0)} for n in noms],
+        key=lambda p: p["score"],
+        reverse=True
+    )
+    return classement
 
 @socketio.on('connect')
 def handle_connect():
@@ -66,21 +83,24 @@ def handle_join_room(data):
 def handle_start_quiz(data):
     pin = data.get('pin', '').replace(" ", "")
     questions = data.get('questions', [])
-    teacher_name = data.get('teacher_name', 'Professeur')[cite: 1]
+    teacher_name = data.get('teacher_name', 'Professeur')
+    title = data.get('title', 'Mon Quiz')
 
     if pin in active_lobbies:
         active_lobbies[pin]["questions"] = questions
-        active_lobbies[pin]["current_question"] = 0  # On commence à la première question (index 0)
-        active_lobbies[pin]["teacher_name"] = teacher_name[cite: 1]
+        active_lobbies[pin]["current_question"] = 0
+        active_lobbies[pin]["teacher_name"] = teacher_name
+        active_lobbies[pin]["title"] = title
 
-        print(f"🚀 Lancement du quiz par '{teacher_name}' pour le salon [{pin}] avec {len(questions)} questions")
+        print(f"🚀 Lancement du quiz '{title}' par '{teacher_name}' pour le salon [{pin}] avec {len(questions)} questions")
 
-        # Diffuser à tous les élèves de la salle
+        # Diffuser à tous les élèves de la salle (avec teacher_name et title)
         emit('quiz_started', {
             'pin': pin, 
             'questions': questions, 
             'current_question': 0,
-            'teacher_name': teacher_name[cite: 1]
+            'teacher_name': teacher_name,
+            'title': title
         }, to=pin)
 
 # ========================================================
@@ -105,7 +125,8 @@ def handle_next_question(data):
             }, to=pin)
         else:
             print(f"🏁 Salon [{pin}] -> Quiz terminé !")
-            emit('quiz_ended', {'pin': pin}, to=pin)
+            leaderboard = build_leaderboard(lobby)
+            emit('quiz_ended', {'pin': pin, 'leaderboard': leaderboard}, to=pin)
 
 # ========================================================
 # 📊 MISE À JOUR DU CLASSEMENT HÔTE EN TEMPS RÉEL
@@ -113,8 +134,15 @@ def handle_next_question(data):
 @socketio.on('update_score')
 def handle_update_score(data):
     pin = data.get('pin', '').replace(" ", "")
-    # Transmettre les résultats des élèves au tableau de bord de l'hôte
-    emit('leaderboard_update', data, to=pin)
+    player = data.get('player')
+    score = data.get('score', 0)
+
+    if pin in active_lobbies:
+        active_lobbies[pin].setdefault("scores", {})
+        active_lobbies[pin]["scores"][player] = score
+
+        leaderboard = build_leaderboard(active_lobbies[pin])
+        emit('leaderboard_update', {"players": leaderboard}, to=pin)
 
 if __name__ == '__main__':
     print("🚀 Serveur TMY Quiz Maker démarré sur http://localhost:5000")

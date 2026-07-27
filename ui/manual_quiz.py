@@ -111,15 +111,14 @@ class ManualQuizPage(ctk.CTkFrame):
         self.timer_opt.set("20s")
         self.timer_opt.pack(side="left", padx=(0, 20))
 
-        # Niveau
-        self.diff_lbl = ctk.CTkLabel(self.config_frame, text="🎯 Difficulté :", font=("Arial", 11, "bold"), text_color="#AAAAAA")
-        self.diff_lbl.pack(side="left", padx=(0, 5))
-        self.diff_opt = ctk.CTkOptionMenu(
-            self.config_frame, values=["easy", "medium", "hard"],
-            width=100, fg_color="#121620", button_color="#2B303C"
+        # Points
+        self.points_lbl = ctk.CTkLabel(self.config_frame, text="🏆 Points :", font=("Arial", 11, "bold"), text_color="#AAAAAA")
+        self.points_lbl.pack(side="left", padx=(0, 5))
+        self.points_entry = ctk.CTkEntry(
+            self.config_frame, width=70, fg_color="#121620", border_color="#2B303C",
+            placeholder_text="10"
         )
-        self.diff_opt.set("medium")
-        self.diff_opt.pack(side="left")
+        self.points_entry.pack(side="left")
 
         # ---------------------------------------------
         # 3. GRILLE DES 4 RÉPONSES
@@ -156,14 +155,11 @@ class ManualQuizPage(ctk.CTkFrame):
         self.render_sidebar()
         self.load_question_to_form(0)
 
-    # ---------------------------------------------
-    # LOGIQUE D'ÉDITION
-    # ---------------------------------------------
     def get_empty_question(self, index):
         return {
             "question": f"Question {index}",
             "A": "", "B": "", "C": "", "D": "",
-            "correct": "A", "time": "20s", "difficulty": "medium"
+            "correct": "A", "time": "20s", "points": "10"
         }
 
     def save_current_form_data(self):
@@ -176,7 +172,7 @@ class ManualQuizPage(ctk.CTkFrame):
         q["D"] = self.answers_entries["D"].get()
         q["correct"] = self.selected_correct
         q["time"] = self.timer_opt.get()
-        q["difficulty"] = self.diff_opt.get()
+        q["points"] = self.points_entry.get().strip() or "10"
 
     def load_question_to_form(self, index):
         """Charge une question dans les champs"""
@@ -193,7 +189,8 @@ class ManualQuizPage(ctk.CTkFrame):
 
         self.set_correct_answer(q["correct"])
         self.timer_opt.set(q.get("time", "20s"))
-        self.diff_opt.set(q.get("difficulty", "medium"))
+        self.points_entry.delete(0, "end")
+        self.points_entry.insert(0, q.get("points", "10"))
 
         self.render_sidebar()
 

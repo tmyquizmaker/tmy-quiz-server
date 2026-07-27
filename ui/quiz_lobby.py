@@ -142,6 +142,12 @@ class QuizLobbyPage(ctk.CTkFrame):
                 self.players.append(player_name)
                 self.update_players_ui()
 
+    def set_players(self, players_list):
+        """Remplace la liste par la liste COMPLÈTE envoyée par le serveur,
+        pour que chaque client soit synchronisé peu importe son ordre d'arrivée."""
+        self.players = list(dict.fromkeys(players_list))  # garde l'ordre, sans doublons
+        self.update_players_ui()
+
     def update_players_ui(self):
         for w in self.players_list_frame.winfo_children():
             w.destroy()

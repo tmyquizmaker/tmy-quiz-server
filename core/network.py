@@ -20,6 +20,7 @@ class NetworkClient:
         # Nouveaux callbacks pour la synchronisation des questions par le prof
         self.on_change_question_callback = None
         self.on_quiz_ended_callback = None
+        self.on_leaderboard_update_callback = None
 
         self.setup_events()
 
@@ -49,8 +50,16 @@ class NetworkClient:
         def on_quiz_started(data=None):
             print("🚀 Quiz lancé par l'hôte !")
             if self.on_quiz_started_callback:
-                # Transmet les données (questions) au callback
+                # Transmet l'ensemble des données (questions, teacher_name, title) au callback
                 self.on_quiz_started_callback(data)
+
+        # ----------------------------------------------------
+        # 📊 Mise à jour du classement
+        # ----------------------------------------------------
+        @self.sio.on('leaderboard_update')
+        def on_leaderboard_update(data):
+            if self.on_leaderboard_update_callback:
+                self.on_leaderboard_update_callback(data)
 
         # ----------------------------------------------------
         # ⏭️ Nouveaux écouteurs pour la gestion synchrone
@@ -86,10 +95,15 @@ class NetworkClient:
                 else:
                     print("❌ Erreur définitive : impossible de contacter le serveur.")
 
-    def create_room(self, pin, title):
+    def create_room(self, pin, title, teacher_name="Professeur"):
+        """Crée une nouvelle salle sur le serveur WebSocket."""
         self.connect()
         if self.is_connected:
-            self.sio.emit('create_room', {'pin': pin, 'title': title})
+            self.sio.emit('create_room', {
+                'pin': pin,
+                'title': title,
+                'teacher_name': teacher_name
+            })
 
     def join_room(self, pin, player_name, response_callback):
         self.connect()
@@ -99,14 +113,16 @@ class NetworkClient:
         else:
             response_callback({'success': False, 'message': '❌ Impossible de contacter le serveur.'})
 
-    # Méthode pour envoyer l'ordre de démarrage du quiz + les questions + le nom du prof
-    def start_quiz(self, pin, questions=None, teacher_name="Professeur"):
+    # Méthode pour envoyer l'ordre de démarrage du quiz + les questions + le nom du prof + le titre
+    def start_quiz(self, pin, questions=None, teacher_name="Professeur", title="Mon Quiz"):
+        """Envoie l'ordre de démarrage au serveur avec toutes les informations nécessaires."""
         self.connect()
         if self.is_connected:
             self.sio.emit('start_quiz', {
                 'pin': pin,
-                'questions': questions,
-                'teacher_name': teacher_name
+                'questions': questions or [],
+                'teacher_name': teacher_name,
+                'title': title
             })
 
     # ----------------------------------------------------
