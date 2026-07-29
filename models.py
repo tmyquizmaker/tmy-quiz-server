@@ -1,0 +1,77 @@
+from datetime import datetime
+from extensions import db
+
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(80), nullable=False)
+    prenom = db.Column(db.String(80), nullable=False)
+    username = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    date_naissance = db.Column(db.Date, nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    email_verified = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    scores = db.relationship("GameHistory", backref="user", lazy=True)
+
+    def to_public_dict(self):
+        """Représentation sûre à renvoyer au client (jamais le hash du mot de passe)."""
+        return {
+            "id": self.id,
+            "nom": self.nom,
+            "prenom": self.prenom,
+            "username": self.username,
+            "email": self.email,
+            "email_verified": self.email_verified,
+        }
+
+
+class Quiz(db.Model):
+    __tablename__ = "quizzes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    titre = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    questions = db.relationship("Question", backref="quiz", lazy=True,
+                                 cascade="all, delete-orphan", order_by="Question.ordre")
+    parties = db.relationship("GameHistory", backref="quiz", lazy=True)
+
+
+class Question(db.Model):
+    __tablename__ = "questions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey("quizzes.id"), nullable=False)
+    texte = db.Column(db.Text, nullable=False)
+    ordre = db.Column(db.Integer, default=0, nullable=False)
+
+    reponses = db.relationship("Answer", backref="question", lazy=True,
+                                cascade="all, delete-orphan")
+
+
+class Answer(db.Model):
+    __tablename__ = "answers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey("questions.id"), nullable=False)
+    texte = db.Column(db.String(500), nullable=False)
+    est_correcte = db.Column(db.Boolean, default=False, nullable=False)
+
+
+class GameHistory(db.Model):
+    """Historique des parties jouées. Le leaderboard est une simple requête
+    (MAX(score) ou SUM(score)) sur cette table, groupée par utilisateur et/ou quiz —
+    pas besoin d'une table 'Leaderboard' séparée à maintenir en double."""
+    __tablename__ = "game_history"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    quiz_id = db.Column(db.Integer, db.ForeignKey("quizzes.id"), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    duree_secondes = db.Column(db.Integer)
+    joue_le = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)

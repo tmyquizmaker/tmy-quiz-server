@@ -1,7 +1,7 @@
 """
 ===========================================
 TMY Quiz Maker
-Version 5.0
+Version 5.3 (Correction de l'affichage du Sujet)
 
 play_quiz.py - Interface de jeu moderne & dynamique
 ===========================================
@@ -14,19 +14,37 @@ from voice import parler, parler_sequence, stop
 import ui.colors as colors
 import ui.fonts as fonts
 
+# Importation sécurisée du gestionnaire d'historique TMY
+try:
+    from data.history_manager import HistoryManager
+    history_mgr = HistoryManager()
+except Exception as e:
+    print(f"⚠️ Impossible de charger HistoryManager : {e}")
+    history_mgr = None
+
 
 class PlayQuizPage(ctk.CTkFrame):
 
-    def __init__(self, master, quiz, finish_callback):
+    def __init__(self, master, quiz, finish_callback, quiz_title="Quiz Solo"):
         super().__init__(master)
 
-        self.quiz = quiz
+        # Extraction prioritaire du sujet / titre du quiz
+        if isinstance(quiz, dict):
+            self.quiz_title = quiz.get("sujet") or quiz.get("title") or quiz.get("quiz_title") or quiz_title
+            self.quiz = quiz.get("questions", [])
+        else:
+            self.quiz = quiz
+            self.quiz_title = quiz_title
+
         self.finish_callback = finish_callback
 
         self.index = 0
         self.score = 0
         self.answered = False
         self.quiz_finished = False
+
+        # Historique précis des choix de l'utilisateur pour le rapport PDF/Détails
+        self.user_answers = {}
 
         self.total_time = 0
         self.question_times = []
@@ -77,10 +95,10 @@ class PlayQuizPage(ctk.CTkFrame):
         self.header_frame = ctk.CTkFrame(self.container, fg_color="transparent")
         self.header_frame.pack(fill="x", pady=(0, 10))
 
-        # Titre App à gauche
+        # Affichage du VRAI SUJET du Quiz
         self.title_lbl = ctk.CTkLabel(
             self.header_frame,
-            text="🧠 TMY QUIZ",
+            text=f"🧠 {self.quiz_title}",
             font=("Arial", 16, "bold"),
             text_color="#1F6AA5"
         )
@@ -90,7 +108,6 @@ class PlayQuizPage(ctk.CTkFrame):
         self.stats_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         self.stats_frame.pack(side="right")
 
-        # --- NOUVEAU : Label du Rang ---
         self.rank_label = ctk.CTkLabel(
             self.stats_frame,
             text="🥇 1er",
@@ -171,7 +188,7 @@ class PlayQuizPage(ctk.CTkFrame):
         self.question.pack(expand=True, padx=25, pady=15)
 
         # -------------------------------------
-        # 4. GRILLE DES RÉPONSES (Boutons paires)
+        # 4. GRILLE DES RÉPONSES
         # -------------------------------------
         self.answers_frame = ctk.CTkFrame(self.container, fg_color="transparent")
         self.answers_frame.pack(fill="both", expand=True)
@@ -180,7 +197,6 @@ class PlayQuizPage(ctk.CTkFrame):
         self.button_frames = {}
 
         for lettre in ["A", "B", "C", "D"]:
-            # Frame de la réponse
             btn_frame = ctk.CTkFrame(
                 self.answers_frame,
                 fg_color="#1E222D",
@@ -190,7 +206,6 @@ class PlayQuizPage(ctk.CTkFrame):
             )
             btn_frame.pack(fill="x", pady=5)
 
-            # Badge de lettre (A, B, C, D)
             badge = ctk.CTkLabel(
                 btn_frame,
                 text=lettre,
@@ -203,7 +218,6 @@ class PlayQuizPage(ctk.CTkFrame):
             )
             badge.pack(side="left", padx=10, pady=8)
 
-            # Bouton de texte
             bouton = ctk.CTkButton(
                 btn_frame,
                 text="",
@@ -260,7 +274,6 @@ class PlayQuizPage(ctk.CTkFrame):
         return max(10, min(60, temps))
 
     def calculate_live_rank(self):
-        """Calcule dynamiquement le rang du joueur selon son taux de réussite et son combo"""
         accuracy = (self.score / (self.index + 1)) if self.index >= 0 else 1.0
         
         if accuracy >= 0.85 and self.combo >= 2:
@@ -284,24 +297,20 @@ class PlayQuizPage(ctk.CTkFrame):
 
         question = self.quiz[self.index]
 
-        # Mettre à jour l'en-tête
         self.counter.configure(text=f"Question {self.index + 1} / {len(self.quiz)}")
         self.rank_label.configure(text=self.calculate_live_rank())
         self.combo_label.configure(text=f"🔥 x{self.combo}")
         self.xp_label.configure(text=f"⚡ {self.total_xp} XP")
 
-        # Réinitialiser les boutons
         for lettre in ["A", "B", "C", "D"]:
             self.buttons[lettre].configure(text="", state="normal")
             frame, badge = self.button_frames[lettre]
             frame.configure(fg_color="#1E222D", border_color="#2B303C")
             badge.configure(fg_color="#2B2D42")
 
-        # Affichage question
         texte_question = question.get("question", "")
         self.question.configure(text=texte_question)
 
-        # Préparer le timer
         self.current_time = self.calculate_time(question)
         self.remaining_time = self.current_time
         self.timer_bar.set(1)
@@ -311,7 +320,6 @@ class PlayQuizPage(ctk.CTkFrame):
         for btn in self.buttons.values():
             btn.configure(state="disabled")
 
-        # Audio Cache & Lecture
         self.audio_cache = {
             "A": [("Petit A", 0.4), (question.get("A", ""), 0.4)],
             "B": [("Petit B", 0.4), (question.get("B", ""), 0.4)],
@@ -324,7 +332,6 @@ class PlayQuizPage(ctk.CTkFrame):
             callback=lambda: self.after(0, self.lire_etape_A)
         )
 
-    # --- Étapes Audio ---
     def lire_etape_A(self):
         if self.answered or self.quiz_finished: return
         self.buttons["A"].configure(text=self.quiz[self.index].get("A", ""))
@@ -365,6 +372,10 @@ class PlayQuizPage(ctk.CTkFrame):
         if self.remaining_time <= 0:
             self.timer_running = False
             self.timeout_sound()
+            
+            # Enregistrement "Non répondue" en cas de timeout
+            self.user_answers[self.index] = "Non répondue"
+            
             bonne = self.quiz[self.index]["correct"]
             parler(f"Temps écoulé. La bonne réponse était {bonne}.")
             self.time_out += 1
@@ -405,9 +416,11 @@ class PlayQuizPage(ctk.CTkFrame):
         self.timer_running = False
         self.stop_timer()
 
+        # Enregistrement de la lettre choisie
+        self.user_answers[self.index] = lettre
+
         temps_utilise = self.current_time - self.remaining_time
 
-        # Calcul XP & Combo
         ratio = self.remaining_time / self.current_time
         xp = int(200 + (800 * ratio))
 
@@ -433,7 +446,6 @@ class PlayQuizPage(ctk.CTkFrame):
             bonus = bonus_table.get(self.combo, 700 if self.combo >= 8 else 0)
             self.total_xp += xp + bonus
 
-            # Style réponse correcte (Vert)
             frame, badge = self.button_frames[lettre]
             frame.configure(fg_color="#1E4620", border_color="#2E7D32")
             badge.configure(fg_color="#2E7D32")
@@ -441,12 +453,10 @@ class PlayQuizPage(ctk.CTkFrame):
             self.correct_sound()
             parler("Bonne réponse.")
         else:
-            # Style mauvaise réponse (Rouge)
             frame_w, badge_w = self.button_frames[lettre]
             frame_w.configure(fg_color="#4A151B", border_color="#C62828")
             badge_w.configure(fg_color="#C62828")
 
-            # Afficher la bonne réponse en vert
             frame_c, badge_c = self.button_frames[bonne]
             frame_c.configure(fg_color="#1E4620", border_color="#2E7D32")
             badge_c.configure(fg_color="#2E7D32")
@@ -455,7 +465,6 @@ class PlayQuizPage(ctk.CTkFrame):
             self.wrong_sound()
             parler(f"Mauvaise réponse. La bonne réponse était {bonne}.")
 
-        # Mettre à jour l'affichage des stats
         self.rank_label.configure(text=self.calculate_live_rank())
         self.combo_label.configure(text=f"🔥 x{self.combo}")
         self.xp_label.configure(text=f"⚡ {self.total_xp} XP")
@@ -477,6 +486,50 @@ class PlayQuizPage(ctk.CTkFrame):
         else:
             self.load_question()
 
+    def build_detailed_questions(self):
+        """
+        Transforme la liste brute du quiz en objets complets contenant :
+        - question
+        - options (A, B, C, D avec leur texte)
+        - user_answer (Le texte complet choisi par l'utilisateur)
+        - correct_answer (Le texte complet de la bonne réponse)
+        - is_correct (Booleen)
+        """
+        formatted = []
+        for idx, q in enumerate(self.quiz):
+            user_key = self.user_answers.get(idx, "Non répondue")
+            correct_key = q.get("correct", "A")
+
+            # Construction de la liste des 4 options
+            options = []
+            for letter in ["A", "B", "C", "D"]:
+                val = q.get(letter, "")
+                if val:
+                    text_opt = val if val.startswith(f"{letter}.") else f"{letter}. {val}"
+                    options.append(text_opt)
+
+            # Récupération des réponses textuelles complètes
+            if user_key in ["A", "B", "C", "D"]:
+                u_text = q.get(user_key, user_key)
+                user_answer = u_text if u_text.startswith(f"{user_key}.") else f"{user_key}. {u_text}"
+            else:
+                user_answer = "Non répondue"
+
+            c_text = q.get(correct_key, correct_key)
+            correct_answer = c_text if c_text.startswith(f"{correct_key}.") else f"{correct_key}. {c_text}"
+
+            is_correct = (user_key == correct_key)
+
+            formatted.append({
+                "question": q.get("question", f"Question {idx+1}"),
+                "options": options,
+                "user_answer": user_answer,
+                "correct_answer": correct_answer,
+                "is_correct": is_correct
+            })
+
+        return formatted
+
     def finish_quiz(self):
         if self.quiz_finished:
             return
@@ -487,8 +540,33 @@ class PlayQuizPage(ctk.CTkFrame):
 
         average_time = round(self.total_time / total_questions, 1) if total_questions > 0 else 0
 
+        # Construction des questions structurées
+        detailed_questions = self.build_detailed_questions()
+
+        # Enregistrement propre dans history.json via HistoryManager
+        if history_mgr is not None:
+            try:
+                hist_data = history_mgr.create_quiz_data(
+                    sujet=self.quiz_title,
+                    niveau="Moyen",
+                    score=self.score,
+                    total=total_questions,
+                    xp=self.total_xp,
+                    rank=self.calculate_live_rank(),
+                    average_time=average_time,
+                    questions=detailed_questions,
+                    mode="Solo"
+                )
+                history_mgr.save_quiz(hist_data)
+            except Exception as e:
+                print(f"⚠️ Erreur lors de la sauvegarde dans l'historique : {e}")
+
+        # Inclusion explicite du sujet dans le dictionnaire résultat
         quiz_data = {
-            "questions": self.quiz,
+            "sujet": self.quiz_title,
+            "quiz_title": self.quiz_title,
+            "title": self.quiz_title,
+            "questions": detailed_questions,
             "average_time": average_time,
             "total_time": self.total_time,
             "fast_answers": self.fast_answers,

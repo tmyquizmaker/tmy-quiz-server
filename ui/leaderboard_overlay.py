@@ -153,7 +153,7 @@ class StudentRankWidget(ctk.CTkFrame):
 
 
 class TeacherFullDashboard(ctk.CTkFrame):
-    """Tableau de bord complet réservé au créateur (Nom, XP, Combo, Temps Moyen)."""
+    """Tableau de bord complet réservé au créateur (Nom, Points, Combo, Temps Moyen)."""
 
     def __init__(self, master):
         super().__init__(
@@ -193,7 +193,7 @@ class TeacherFullDashboard(ctk.CTkFrame):
         ).pack(side="left", padx=2)
         ctk.CTkLabel(
             headers,
-            text="XP",
+            text="Points",
             width=65,
             font=("Arial", 10, "bold"),
             text_color="#AAAAAA",
@@ -225,8 +225,8 @@ class TeacherFullDashboard(ctk.CTkFrame):
 
     def update_dashboard(self, players_full_data):
         """
-        players_full_data format:
-        [{"rank": 1, "name": "Jean", "xp": 1200, "combo": 4, "avg_time": "2.1s"}, ...]
+        players_full_data format (déjà calculé par le serveur, avec égalités) :
+        [{"rank": 1, "name": "Jean", "score": 30, "combo": 2, "avg_time": 8.5}, ...]
         """
         if not players_full_data:
             self._hide_all_rows()
@@ -239,13 +239,15 @@ class TeacherFullDashboard(ctk.CTkFrame):
         for idx, p in enumerate(players_full_data):
             row_widgets = self._rows_cache[idx]
 
-            rank_str = f"{p['rank']}er" if p["rank"] == 1 else f"{p['rank']}e"
+            rang = p.get("rank", idx + 1)
+            rank_str = f"{rang}er" if rang == 1 else f"{rang}e"
 
             row_widgets["lbl_rank"].configure(text=rank_str)
-            row_widgets["lbl_name"].configure(text=p["name"])
-            row_widgets["lbl_xp"].configure(text=f"{p['xp']} XP")
-            row_widgets["lbl_combo"].configure(text=f"🔥 x{p['combo']}")
-            row_widgets["lbl_time"].configure(text=p["avg_time"])
+            row_widgets["lbl_name"].configure(text=p.get("name", "?"))
+            row_widgets["lbl_xp"].configure(text=f"{p.get('score', 0)} pts")
+            row_widgets["lbl_combo"].configure(text=f"🔥 x{p.get('combo', 0)}")
+            temps = p.get("avg_time", 0)
+            row_widgets["lbl_time"].configure(text=f"{temps}s" if temps else "--")
 
             row_widgets["frame"].pack(fill="x", pady=2)
 

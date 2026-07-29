@@ -1,46 +1,162 @@
 """
 ===========================================
 TMY Quiz Maker
-Version 5.2
+Version 5.4 (Sécurité Anti-Quiz Vides)
 
-quiz_storage.py - Sauvegarde et Chargement des Quiz locaux
+quiz_storage.py - Sauvegarde, Chargement et Suppression des Quiz locaux
 ===========================================
 """
 
 import json
 import os
+from datetime import datetime
 
-STORAGE_FILE = "saved_quizzes.json"
+# Chemin absolu vers quizzes.json dans le dossier data/
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+QUIZ_FILE = os.path.join(BASE_DIR, "quizzes.json")
 
-def save_quiz(quiz_title, questions, teacher_name="Professeur", **kwargs):
-    """Sauvegarde un quiz dans le fichier JSON local en incluant le nom de l'auteur/professeur"""
-    quizzes = load_all_quizzes()
-    
-    new_quiz = {
-        "id": len(quizzes) + 1,
-        "title": quiz_title,
-        "teacher": teacher_name,
-        "total_questions": len(questions),
-        "questions": questions
-    }
-    
-    quizzes.append(new_quiz)
-    
+
+def load_quizzes():
+    """Charge tous les quiz enregistrés dans data/quizzes.json en filtrant et nettoyant les données invalides"""
+    if not os.path.exists(QUIZ_FILE):
+        return []
     try:
-        with open(STORAGE_FILE, "w", encoding="utf-8") as f:
+        with open(QUIZ_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            
+            # S'assurer qu'on a bien une liste
+            if not isinstance(data, list):
+                return []
+            
+            # Aplatir et filtrer les données (peu importe le niveau d'imbrication)
+            def _aplatir(elements):
+                resultat = []
+                for el in elements:
+                    if isinstance(el, dict):
+                        resultat.append(el)
+                    elif isinstance(el, list):
+                        resultat.extend(_aplatir(el))
+                return resultat
+
+            cleaned_quizzes = _aplatir(data)
+                            
+            # 🛑 SÉCURITÉ : Ne conserver que les VRAIS quiz qui ont au moins 1 question
+            valid_quizzes = [
+                q for q in cleaned_quizzes 
+                if len(q.get("questions", [])) > 0 and q.get("title", "").strip() != "Quiz sans titre"
+            ]
+            
+            return valid_quizzes
+    except Exception as e:
+        print(f"❌ Erreur lors du chargement des quiz : {e}")
+        return []
+
+
+# Alias pour la compatibilité ascendante
+load_all_quizzes = load_quizzes
+
+
+def save_quiz(title, questions, teacher_name="Professeur", **kwargs):
+    """Sauvegarde ou met à jour un quiz dans le fichier JSON local avec garde-fou anti-vide"""
+    
+    # 🛑 SÉCURITÉ ABSOLUE : Si le quiz n'a aucune question ou n'a pas de nom valide, ON ANNULE
+    if not questions or len(questions) == 0:
+        print("⚠️ Sauvegarde annulée : Tentative d'enregistrer un quiz sans aucune question.")
+        return None
+
+    clean_title = (title or "").strip()
+    if not clean_title or clean_title == "Quiz sans titre":
+        print("⚠️ Sauvegarde annulée : Titre invalide ou 'Quiz sans titre'.")
+        return None
+
+    quizzes = load_quizzes()
+
+    # Vérifier si un ID a été fourni pour mettre à jour un quiz existant
+    quiz_id = kwargs.get("quiz_id") or kwargs.get("id")
+    
+    existing_quiz = None
+    if quiz_id:
+        for q in quizzes:
+            if isinstance(q, dict) and q.get("id") == quiz_id:
+                existing_quiz = q
+                break
+
+    if existing_quiz:
+        # Mise à jour du quiz existant (garde la date de création d'origine)
+        existing_quiz["title"] = clean_title
+        existing_quiz["teacher_name"] = teacher_name
+        existing_quiz["total_questions"] = len(questions)
+        existing_quiz["questions"] = questions
+        if "created_at" not in existing_quiz:
+            existing_quiz["created_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        saved_entry = existing_quiz
+    else:
+        # Création d'un nouvel ID unique (max ID + 1)
+        existing_ids = [q.get("id", 0) for q in quizzes if isinstance(q, dict)]
+        next_id = max(existing_ids) + 1 if existing_ids else 1
+
+        saved_entry = {
+            "id": next_id,
+            "title": clean_title,
+            "teacher_name": teacher_name,
+            "total_questions": len(questions),
+            "questions": questions,
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        quizzes.append(saved_entry)
+
+    try:
+        with open(QUIZ_FILE, "w", encoding="utf-8") as f:
             json.dump(quizzes, f, ensure_ascii=False, indent=4)
-        print(f"✅ Quiz '{quiz_title}' sauvegardé avec succès par {teacher_name}.")
+        print(f"✅ Quiz '{clean_title}' sauvegardé avec succès par {teacher_name}.")
     except Exception as e:
         print(f"❌ Erreur lors de la sauvegarde du quiz : {e}")
-        
-    return new_quiz
 
-def load_all_quizzes():
-    """Charge tous les quiz enregistrés"""
-    if not os.path.exists(STORAGE_FILE):
-        return []
+    return saved_entry
+
+
+def delete_quiz(quiz_id):
+    """Supprime un quiz de la liste via son ID"""
+    quizzes = load_quizzes()
+    
+    # Filtrer pour supprimer le quiz correspondant
+    updated_quizzes = [q for q in quizzes if isinstance(q, dict) and q.get("id") != quiz_id]
+
+    if len(updated_quizzes) == len(quizzes):
+        print(f"⚠️ Aucun quiz trouvé avec l'ID {quiz_id}.")
+        return False
+
     try:
-        with open(STORAGE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
+        with open(QUIZ_FILE, "w", encoding="utf-8") as f:
+            json.dump(updated_quizzes, f, ensure_ascii=False, indent=4)
+        print(f"🗑️ Quiz ID {quiz_id} supprimé avec succès.")
+        return True
+    except Exception as e:
+        print(f"❌ Erreur lors de la suppression du quiz : {e}")
+        return False
+
+
+def clean_empty_quizzes():
+    """Supprime définitivement tous les quiz vides ou 'Quiz sans titre' du fichier JSON"""
+    if not os.path.exists(QUIZ_FILE):
+        return True
+        
+    try:
+        with open(QUIZ_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if not isinstance(data, list):
+            return False
+
+        filtered = [
+            q for q in data 
+            if isinstance(q, dict) and len(q.get("questions", [])) > 0 and q.get("title", "").strip() not in ["", "Quiz sans titre"]
+        ]
+
+        with open(QUIZ_FILE, "w", encoding="utf-8") as f:
+            json.dump(filtered, f, ensure_ascii=False, indent=4)
+        print("🧹 Nettoyage des quiz vides effectué avec succès.")
+        return True
+    except Exception as e:
+        print(f"❌ Erreur lors du nettoyage : {e}")
+        return False

@@ -125,7 +125,9 @@ class AIGenerator:
 
             niveau,
 
-            regeneration=False
+            regeneration=False,
+
+            sauvegarder=True
 
     ):
 
@@ -239,11 +241,36 @@ class AIGenerator:
 
 
 
-        if questions:
+        if questions and sauvegarder:
 
             self.save_quiz(questions)
 
         return questions
+
+    # ======================================
+    # Génération d'UNE SEULE question
+    # (mode multijoueur "Questions entre amis" : difficulté
+    # adaptée en direct, une question à la fois, par sujet)
+    # ======================================
+
+    def generate_single_question(self, sujet, niveau="easy"):
+        """Génère une seule question sur un sujet donné, au niveau de
+        difficulté donné. Utilisé par le serveur du mode party pour
+        générer les questions une par une, en ajustant la difficulté
+        selon le taux de réussite de la question précédente."""
+
+        questions = self.generate_quiz(
+            sujet=sujet,
+            nombre_questions=1,
+            niveau=niveau,
+            regeneration=False,
+            sauvegarder=False,
+        )
+
+        if not questions:
+            raise Exception(f"Aucune question générée pour le sujet '{sujet}'.")
+
+        return questions[0]
 
         
     # ======================================

@@ -44,7 +44,7 @@ class ManualQuizPage(ctk.CTkFrame):
         )
         self.quiz_title_entry.pack(side="left", padx=5, expand=True, fill="x")
 
-        # INPUT 2 : Nom du Professeur (AJOUTÉ)
+        # INPUT 2 : Nom du Professeur
         self.prof_name_entry = ctk.CTkEntry(
             self.top_bar, placeholder_text="Nom du Prof (ex: Prof. Dubois)",
             font=("Arial", 13, "bold"), width=200, fg_color="#121620", border_color="#2B303C"
@@ -151,9 +151,38 @@ class ManualQuizPage(ctk.CTkFrame):
             entry.pack(side="left", fill="x", expand=True)
             self.answers_entries[lettre] = entry
 
-        # Charger la première question
+        # Charger la première question par défaut
         self.render_sidebar()
         self.load_question_to_form(0)
+
+    def load_quiz(self, quiz_data):
+        """Charge un quiz existant dans les champs d'édition."""
+        if not quiz_data:
+            return
+
+        # 1. Charger le titre et le nom de l'auteur/professeur
+        title = quiz_data.get("title", "")
+        teacher = quiz_data.get("teacher_name", "")
+
+        if hasattr(self, "quiz_title_entry"):
+            self.quiz_title_entry.delete(0, "end")
+            self.quiz_title_entry.insert(0, title)
+
+        if hasattr(self, "prof_name_entry"):
+            self.prof_name_entry.delete(0, "end")
+            self.prof_name_entry.insert(0, teacher)
+
+        # 2. Récupérer et charger la liste des questions
+        questions_input = quiz_data.get("questions", [])
+
+        if questions_input:
+            # Réinitialise la liste locale
+            self.questions = list(questions_input)
+            self.current_q_index = 0
+
+            # Affiche directement la première question SANS sauvegarder par-dessus
+            # (sinon ça écraserait la question tout juste chargée avec les vieux champs vides)
+            self.populate_form(0)
 
     def get_empty_question(self, index):
         return {
@@ -164,6 +193,9 @@ class ManualQuizPage(ctk.CTkFrame):
 
     def save_current_form_data(self):
         """Enregistre les saisis actuelles dans la structure de données"""
+        if not self.questions or self.current_q_index >= len(self.questions):
+            return
+
         q = self.questions[self.current_q_index]
         q["question"] = self.question_text.get()
         q["A"] = self.answers_entries["A"].get()
@@ -174,25 +206,34 @@ class ManualQuizPage(ctk.CTkFrame):
         q["time"] = self.timer_opt.get()
         q["points"] = self.points_entry.get().strip() or "10"
 
-    def load_question_to_form(self, index):
-        """Charge une question dans les champs"""
-        self.save_current_form_data()
+    def populate_form(self, index):
+        """Affiche uniquement les données de la question à l'écran, SANS rien sauvegarder avant
+        (utilisé lors du chargement initial d'un quiz existant)."""
         self.current_q_index = index
+
+        if not self.questions or index >= len(self.questions):
+            return
+
         q = self.questions[index]
 
         self.question_text.delete(0, "end")
-        self.question_text.insert(0, q["question"])
+        self.question_text.insert(0, q.get("question", ""))
 
         for lettre in ["A", "B", "C", "D"]:
             self.answers_entries[lettre].delete(0, "end")
-            self.answers_entries[lettre].insert(0, q[lettre])
+            self.answers_entries[lettre].insert(0, q.get(lettre, ""))
 
-        self.set_correct_answer(q["correct"])
+        self.set_correct_answer(q.get("correct", "A"))
         self.timer_opt.set(q.get("time", "20s"))
         self.points_entry.delete(0, "end")
-        self.points_entry.insert(0, q.get("points", "10"))
+        self.points_entry.insert(0, str(q.get("points", "10")))
 
         self.render_sidebar()
+
+    def load_question_to_form(self, index):
+        """Charge une question dans les champs (sauvegarde d'abord la question en cours)."""
+        self.save_current_form_data()
+        self.populate_form(index)
 
     def set_correct_answer(self, lettre):
         self.selected_correct = lettre
@@ -216,7 +257,7 @@ class ManualQuizPage(ctk.CTkFrame):
             is_active = (i == self.current_q_index)
             btn = ctk.CTkButton(
                 self.q_list_frame,
-                text=f"Q{i+1}. {q['question'][:12]}...",
+                text=f"Q{i+1}. {q.get('question', '')[:12]}...",
                 font=("Arial", 11, "bold" if is_active else "normal"),
                 fg_color="#1F6AA5" if is_active else "#121620",
                 hover_color="#144870",
@@ -229,11 +270,9 @@ class ManualQuizPage(ctk.CTkFrame):
         """Valide et transmet le quiz terminé avec le nom du prof"""
         self.save_current_form_data()
         
-        # Récupération des deux valeurs
         title = self.quiz_title_entry.get().strip() or "Mon Quiz Personnalisé"
         teacher_name = self.prof_name_entry.get().strip() or "Professeur Anonyme"
 
-        # Transmet le titre, le nom du prof et la liste des questions
         self.on_quiz_created(
             quiz_title=title, 
             teacher_name=teacher_name, 

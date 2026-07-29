@@ -1,7 +1,7 @@
 """
 ===========================================
 TMY Quiz Maker
-Version 5.0
+Version 5.3
 
 join_page.py - Page complète pour rejoindre une salle
 ===========================================
@@ -9,13 +9,18 @@ join_page.py - Page complète pour rejoindre une salle
 
 import customtkinter as ctk
 
+
 class JoinRoomPage(ctk.CTkFrame):
 
-    def __init__(self, master, verify_join_callback, back_callback):
+    def __init__(self, master, verify_join_callback, back_callback, demander_sujet=False):
         super().__init__(master, fg_color="#121620")
 
         self.verify_join_callback = verify_join_callback
         self.back_callback = back_callback
+        # 👈 Activé uniquement pour le mode "Questions entre amis" : chaque joueur
+        # propose son propre sujet, l'IA génère une question par sujet unique reçu.
+        self.demander_sujet = demander_sujet
+        self.sujet_entry = None
 
         self.container = ctk.CTkFrame(self, fg_color="transparent")
         self.container.pack(expand=True, fill="both", padx=30, pady=20)
@@ -58,6 +63,12 @@ class JoinRoomPage(ctk.CTkFrame):
         self.prenom_entry = ctk.CTkEntry(self.form_card, placeholder_text="Ex: Marc", font=("Arial", 13), fg_color="#121620", border_color="#2B303C", height=42, width=320)
         self.prenom_entry.pack(padx=30, pady=(4, 15))
 
+        # Champ Sujet (uniquement pour le mode "Questions entre amis")
+        if self.demander_sujet:
+            ctk.CTkLabel(self.form_card, text="Sujet de TES questions :", font=("Arial", 12, "bold"), text_color="#AAAAAA").pack(anchor="w", padx=30)
+            self.sujet_entry = ctk.CTkEntry(self.form_card, placeholder_text="Ex: Histoire de France, Foot, Cinéma...", font=("Arial", 13), fg_color="#121620", border_color="#2B303C", height=42, width=320)
+            self.sujet_entry.pack(padx=30, pady=(4, 15))
+
         # Champ Code PIN
         ctk.CTkLabel(self.form_card, text="Code PIN de la salle :", font=("Arial", 12, "bold"), text_color="#AAAAAA").pack(anchor="w", padx=30)
         self.pin_entry = ctk.CTkEntry(self.form_card, placeholder_text="Ex: 291714", font=("Arial", 16, "bold"), fg_color="#121620", border_color="#1F6AA5", height=45, width=320)
@@ -79,6 +90,7 @@ class JoinRoomPage(ctk.CTkFrame):
         nom = self.nom_entry.get().strip()
         prenom = self.prenom_entry.get().strip()
         pin = self.pin_entry.get().strip().replace(" ", "")
+        sujet = self.sujet_entry.get().strip() if self.sujet_entry else None
 
         if not nom or not prenom:
             self.show_error("❌ Veuillez saisir votre nom et prénom.")
@@ -88,13 +100,18 @@ class JoinRoomPage(ctk.CTkFrame):
             self.show_error("❌ Veuillez entrer le code PIN de la salle.")
             return
 
+        if self.demander_sujet and not sujet:
+            self.show_error("❌ Veuillez indiquer un sujet pour tes questions.")
+            return
+
         full_name = f"{prenom} {nom}"
-        
-        # Appel du callback de vérification
-        success, error_msg = self.verify_join_callback(pin, full_name)
-        
-        if not success:
-            self.show_error(error_msg)
+
+        # Le callback gère maintenant tout de façon asynchrone :
+        # écran de chargement -> navigation OU retour ici avec une erreur.
+        if self.demander_sujet:
+            self.verify_join_callback(pin, full_name, sujet)
+        else:
+            self.verify_join_callback(pin, full_name)
 
     def show_error(self, message):
         self.error_lbl.configure(text=message)

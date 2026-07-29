@@ -128,7 +128,23 @@ class QuizLobbyPage(ctk.CTkFrame):
             )
             self.waiting_lbl.pack(side="right", padx=20, pady=10)
 
+        # Compte à rebours de démarrage automatique (mode party, affiché aux deux rôles)
+        self.auto_start_lbl = ctk.CTkLabel(
+            self.bottom_bar, text="", font=("Arial", 12, "bold"), text_color="#4CC9F0"
+        )
+        self.auto_start_lbl.pack(side="left", padx=20)
+
         self.update_players_ui()
+
+    def set_auto_start_countdown(self, seconds_restantes):
+        """Affiche/actualise le compte à rebours avant démarrage automatique
+        (déclenché côté serveur quand l'effectif cible de la salle est atteint)."""
+        if not hasattr(self, "auto_start_lbl"):
+            return
+        if seconds_restantes is None or seconds_restantes <= 0:
+            self.auto_start_lbl.configure(text="")
+        else:
+            self.auto_start_lbl.configure(text=f"⏳ Démarrage automatique dans {seconds_restantes}s...")
 
     def get_count_string(self):
         if self.max_players == 0:

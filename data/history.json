@@ -1,1 +1,419 @@
-[]
+[
+    {
+        "id": 7,
+        "mode": "Solo",
+        "sujet": "Quiz Solo",
+        "niveau": "Moyen",
+        "score": 3,
+        "total": 4,
+        "percentage": 75,
+        "xp": 1780,
+        "rank": "🥈 2ème",
+        "average_time": 12.2,
+        "questions": [
+            {
+                "question": "De quelles particules subatomiques un atome est-il principalement composé, portant des charges positives, négatives ou aucune charge ?",
+                "options": [
+                    "A. Protons, Neutrons, Électrons",
+                    "B. Molécules, Ions, Isotopes",
+                    "C. Quarks, Leptons, Photons",
+                    "D. Noyaux, Orbitales, Gaz"
+                ],
+                "user_answer": "A. Protons, Neutrons, Électrons",
+                "correct_answer": "A. Protons, Neutrons, Électrons",
+                "is_correct": true
+            },
+            {
+                "question": "Quel type de changement n'altère pas la nature chimique d'une substance, comme la fusion de la glace ou l'ébullition de l'eau ?",
+                "options": [
+                    "A. Changement physique",
+                    "B. Changement chimique",
+                    "C. Réaction nucléaire",
+                    "D. Synthèse organique"
+                ],
+                "user_answer": "A. Changement physique",
+                "correct_answer": "A. Changement physique",
+                "is_correct": true
+            },
+            {
+                "question": "En chimie, comment définit-on une substance pure qui ne peut pas être décomposée en substances plus simples par des moyens chimiques habituels ?",
+                "options": [
+                    "A. Un élément",
+                    "B. Un composé",
+                    "C. Un mélange",
+                    "D. Une molécule"
+                ],
+                "user_answer": "D. Une molécule",
+                "correct_answer": "A. Un élément",
+                "is_correct": false
+            },
+            {
+                "question": "Quel est le gaz le plus abondant dans l'atmosphère terrestre, constituant environ 78% de l'air que nous respirons ?",
+                "options": [
+                    "A. L'azote",
+                    "B. L'oxygène",
+                    "C. Le dioxyde de carbone",
+                    "D. L'argon"
+                ],
+                "user_answer": "A. L'azote",
+                "correct_answer": "A. L'azote",
+                "is_correct": true
+            }
+        ],
+        "date": "29/07/2026 12:16"
+    },
+    {
+        "id": 1,
+        "mode": "Solo",
+        "sujet": "Quiz Solo",
+        "niveau": "Moyen",
+        "score": 3,
+        "total": 3,
+        "percentage": 100,
+        "xp": 2970,
+        "rank": "🥈 2ème",
+        "average_time": 1.3,
+        "questions": [
+            {
+                "question": "Qu'est-ce qui est nécessaire pour changer le mouvement d'un objet, le mettre en mouvement, ou l'arrêter complètement ?",
+                "A": "Une force",
+                "B": "La couleur",
+                "C": "Le temps",
+                "D": "La lumière",
+                "correct": "A",
+                "difficulty": "easy",
+                "time": 15
+            },
+            {
+                "question": "Dans le Système International d'Unités (SI), quelle est l'unité de mesure standard pour l'énergie et le travail ?",
+                "A": "Le Watt",
+                "B": "Le Joule",
+                "C": "Le Newton",
+                "D": "L'Ampère",
+                "correct": "B",
+                "difficulty": "easy",
+                "time": 15
+            },
+            {
+                "question": "Parmi les propositions suivantes, quels sont les trois états de la matière les plus couramment observés et étudiés en physique ?",
+                "A": "Solide, liquide, gazeux",
+                "B": "Chaud, froid, tiède",
+                "C": "Grand, petit, moyen",
+                "D": "Lourd, léger, vide",
+                "correct": "A",
+                "difficulty": "easy",
+                "time": 15
+            }
+        ],
+        "date": "28/07/2026 16:19"
+    },
+    {
+        "id": 2,
+        "mode": "Solo",
+        "sujet": "Quiz Solo",
+        "niveau": "Moyen",
+        "score": 3,
+        "total": 5,
+        "percentage": 60,
+        "xp": 3380,
+        "rank": "🥉 3ème",
+        "average_time": 3.6,
+        "questions": [
+            {
+                "question": "Quel type de liaison chimique implique le transfert complet d'électrons entre atomes, créant des ions chargés ?",
+                "A": "Covalente",
+                "B": "Ionique",
+                "C": "Métallique",
+                "D": "Hydrogène",
+                "correct": "B",
+                "difficulty": "medium",
+                "time": 20
+            },
+            {
+                "question": "Quel terme décrit l'énergie minimale nécessaire pour retirer un électron d'un atome gazeux isolé ?",
+                "A": "Affinité électronique",
+                "B": "Électronégativité",
+                "C": "Énergie d'ionisation",
+                "D": "Rayon atomique",
+                "correct": "C",
+                "difficulty": "medium",
+                "time": 22
+            },
+            {
+                "question": "Une solution aqueuse ayant un pH de 2 est-elle considérée comme acide, basique ou neutre ?",
+                "A": "Basique",
+                "B": "Neutre",
+                "C": "Acide",
+                "D": "Amphotère",
+                "correct": "C",
+                "difficulty": "medium",
+                "time": 18
+            },
+            {
+                "question": "Quelle est la famille de composés organiques caractérisée par la présence du groupe fonctionnel -COOH ?",
+                "A": "Cétones",
+                "B": "Esters",
+                "C": "Aldéhydes",
+                "D": "Acides carboxyliques",
+                "correct": "D",
+                "difficulty": "medium",
+                "time": 25
+            },
+            {
+                "question": "Combien de grammes de dioxyde de carbone (CO2) correspondent à 0,5 mole de cette substance ? (C=12 g/mol, O=16 g/mol)",
+                "A": "22 grammes",
+                "B": "44 grammes",
+                "C": "11 grammes",
+                "D": "33 grammes",
+                "correct": "A",
+                "difficulty": "medium",
+                "time": 28
+            }
+        ],
+        "date": "28/07/2026 16:55"
+    },
+    {
+        "id": 3,
+        "mode": "Solo",
+        "sujet": "Quiz Solo",
+        "niveau": "Moyen",
+        "score": 3,
+        "total": 4,
+        "percentage": 75,
+        "xp": 2483,
+        "rank": "🥈 2ème",
+        "average_time": 4.8,
+        "questions": [
+            {
+                "question": "Quel instrument est couramment utilisé pour mesurer la température d'un corps ou d'un environnement ?",
+                "A": "Le thermomètre",
+                "B": "Le baromètre",
+                "C": "Le voltmètre",
+                "D": "Le chronomètre",
+                "correct": "A",
+                "difficulty": "easy",
+                "time": 15
+            },
+            {
+                "question": "Quel phénomène se produit lorsque la lumière frappe une surface et rebondit, changeant de direction ?",
+                "A": "La réfraction",
+                "B": "La réflexion",
+                "C": "La diffraction",
+                "D": "L'absorption",
+                "correct": "B",
+                "difficulty": "easy",
+                "time": 15
+            },
+            {
+                "question": "Quelle est la quantité physique qui représente le flux d'électrons dans un circuit électrique ?",
+                "A": "La tension électrique",
+                "B": "L'intensité du courant",
+                "C": "La résistance électrique",
+                "D": "La puissance électrique",
+                "correct": "B",
+                "difficulty": "medium",
+                "time": 20
+            },
+            {
+                "question": "Comment nomme-t-on la force fondamentale qui attire les objets dotés de masse les uns vers les autres, notamment vers la Terre ?",
+                "A": "La friction",
+                "B": "La gravité",
+                "C": "La poussée",
+                "D": "La tension",
+                "correct": "B",
+                "difficulty": "easy",
+                "time": 15
+            }
+        ],
+        "date": "28/07/2026 18:50"
+    },
+    {
+        "id": 4,
+        "mode": "Solo",
+        "sujet": "Quiz Solo",
+        "niveau": "Moyen",
+        "score": 3,
+        "total": 5,
+        "percentage": 60,
+        "xp": 2962,
+        "rank": "🥉 3ème",
+        "average_time": 7.2,
+        "questions": [
+            {
+                "question": "Quelle propriété physique d'une onde sonore détermine principalement le volume (intensité sonore) perçu ?",
+                "options": [
+                    "A. Fréquence",
+                    "B. Longueur d'onde",
+                    "C. Amplitude",
+                    "D. Vitesse de propagation"
+                ],
+                "user_answer": "A. Fréquence",
+                "correct_answer": "C. Amplitude",
+                "is_correct": false
+            },
+            {
+                "question": "Selon la loi d'Ohm, comment la résistance R se calcule-t-elle avec la tension V aux bornes d'un circuit et l'intensité I qui le traverse ?",
+                "options": [
+                    "A. R = V/I",
+                    "B. R = V*I",
+                    "C. R = I/V",
+                    "D. R = V + I"
+                ],
+                "user_answer": "A. R = V/I",
+                "correct_answer": "A. R = V/I",
+                "is_correct": true
+            },
+            {
+                "question": "Quel mode de transfert de chaleur implique le mouvement direct de la matière, transportant l'énergie thermique, comme dans les liquides et les gaz ?",
+                "options": [
+                    "A. Conduction",
+                    "B. Convection",
+                    "C. Rayonnement",
+                    "D. Diffusion"
+                ],
+                "user_answer": "C. Rayonnement",
+                "correct_answer": "B. Convection",
+                "is_correct": false
+            },
+            {
+                "question": "Quel type de lentille est capable de faire converger des rayons lumineux parallèles en un point focal unique, formant souvent des images réelles ?",
+                "options": [
+                    "A. Lentille divergente",
+                    "B. Lentille concave",
+                    "C. Miroir plan",
+                    "D. Lentille convergente"
+                ],
+                "user_answer": "D. Lentille convergente",
+                "correct_answer": "D. Lentille convergente",
+                "is_correct": true
+            },
+            {
+                "question": "Quelle quantité physique vectorielle est le produit de la masse d'un objet par sa vitesse, représentant son inertie en mouvement ?",
+                "options": [
+                    "A. Force",
+                    "B. Énergie cinétique",
+                    "C. Accélération",
+                    "D. Quantité de mouvement"
+                ],
+                "user_answer": "D. Quantité de mouvement",
+                "correct_answer": "D. Quantité de mouvement",
+                "is_correct": true
+            }
+        ],
+        "date": "28/07/2026 19:25"
+    },
+    {
+        "id": 5,
+        "mode": "Solo",
+        "sujet": "Quiz Solo",
+        "niveau": "Moyen",
+        "score": 2,
+        "total": 3,
+        "percentage": 66,
+        "xp": 1343,
+        "rank": "🥉 3ème",
+        "average_time": 5.7,
+        "questions": [
+            {
+                "question": "Quelle propriété physique représente la quantité de matière contenue dans un objet, indépendamment de sa localisation et de la gravité ?",
+                "options": [
+                    "A. Le poids",
+                    "B. Le volume",
+                    "C. La masse",
+                    "D. L'énergie"
+                ],
+                "user_answer": "C. La masse",
+                "correct_answer": "C. La masse",
+                "is_correct": true
+            },
+            {
+                "question": "Comment appelle-t-on la propriété d'une substance qui est calculée en divisant sa masse par son volume ?",
+                "options": [
+                    "A. La pression",
+                    "B. La densité",
+                    "C. Le poids",
+                    "D. La chaleur"
+                ],
+                "user_answer": "B. La densité",
+                "correct_answer": "B. La densité",
+                "is_correct": true
+            },
+            {
+                "question": "Parmi les machines simples suivantes, laquelle permet de soulever des charges lourdes en utilisant un point d'appui (pivot) ?",
+                "options": [
+                    "A. La poulie",
+                    "B. Le plan incliné",
+                    "C. Le levier",
+                    "D. La vis"
+                ],
+                "user_answer": "A. La poulie",
+                "correct_answer": "C. Le levier",
+                "is_correct": false
+            }
+        ],
+        "date": "28/07/2026 19:49"
+    },
+    {
+        "id": 6,
+        "mode": "Solo",
+        "sujet": "Quiz Solo",
+        "niveau": "Moyen",
+        "score": 3,
+        "total": 4,
+        "percentage": 75,
+        "xp": 2342,
+        "rank": "🥈 2ème",
+        "average_time": 4.0,
+        "questions": [
+            {
+                "question": "Quelle est l'unité de mesure standard pour la longueur dans le Système International d'Unités (SI) ?",
+                "options": [
+                    "A. Le kilogramme",
+                    "B. Le mètre",
+                    "C. La seconde",
+                    "D. L'ampère"
+                ],
+                "user_answer": "B. Le mètre",
+                "correct_answer": "B. Le mètre",
+                "is_correct": true
+            },
+            {
+                "question": "Quel type d'énergie est directement lié au mouvement d'un objet et dépend de sa masse et de sa vitesse ?",
+                "options": [
+                    "A. L'énergie potentielle",
+                    "B. L'énergie thermique",
+                    "C. L'énergie cinétique",
+                    "D. L'énergie nucléaire"
+                ],
+                "user_answer": "C. L'énergie cinétique",
+                "correct_answer": "C. L'énergie cinétique",
+                "is_correct": true
+            },
+            {
+                "question": "Par rapport à l'air, comment la vitesse du son se comporte-t-elle généralement dans l'eau ?",
+                "options": [
+                    "A. Elle est plus lente.",
+                    "B. Elle est identique.",
+                    "C. Elle est plus rapide.",
+                    "D. Elle varie de manière imprévisible."
+                ],
+                "user_answer": "A. Elle est plus lente.",
+                "correct_answer": "C. Elle est plus rapide.",
+                "is_correct": false
+            },
+            {
+                "question": "Quel est le composant d'un circuit électrique qui a pour rôle de limiter le passage du courant ?",
+                "options": [
+                    "A. Un générateur",
+                    "B. Une résistance",
+                    "C. Un interrupteur",
+                    "D. Un fil conducteur"
+                ],
+                "user_answer": "B. Une résistance",
+                "correct_answer": "B. Une résistance",
+                "is_correct": true
+            }
+        ],
+        "date": "28/07/2026 19:59"
+    }
+]

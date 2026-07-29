@@ -115,6 +115,7 @@ class HomePage(ctk.CTkFrame):
         self.card_tmy = self.create_action_card(
             parent=self.grid_frame,
             icon="🧠",
+            tag="INTELLIGENCE ARTIFICIELLE",
             title="GÉNÉRER AVEC TMY",
             desc="Laisse l'IA créer un quiz sur-mesure en quelques secondes sur n'importe quel sujet.",
             btn_text="LANCER L'IA",
@@ -128,19 +129,22 @@ class HomePage(ctk.CTkFrame):
         self.card_multi = self.create_action_card(
             parent=self.grid_frame,
             icon="🌐",
-            title="MODE MULTIJOUEUR",
-            desc="Défie tes amis en direct ! Même quiz, mêmes questions, classement en temps réel.",
-            btn_text="CRÉER OU REJOINDRE",
+            tag="MULTIJOUEUR SOCIAL",
+            title="DÉFIS ENTRE AMIS",
+            desc="Défie tes amis en direct ! 10 niveaux de jeu, classement en temps réel.",
+            btn_text="VOIR LES NIVEAUX",
             btn_color="#8A2BE2",
             hover_color="#6A1B9A",
             command=self.open_multiplayer,
-            row=0, col=1
+            row=0, col=1,
+            badge="NOUVEAU"
         )
 
         # --- CARTE 3 : CRÉATION MANUELLE ---
         self.card_manual = self.create_action_card(
             parent=self.grid_frame,
             icon="✍️",
+            tag="ÉDITION MANUELLE",
             title="CRÉER MANUELLEMENT",
             desc="Rédige tes propres questions, réponses, explications et minuteurs personnalisés.",
             btn_text="CRÉER UN QUIZ",
@@ -154,6 +158,7 @@ class HomePage(ctk.CTkFrame):
         self.card_quizzes = self.create_action_card(
             parent=self.grid_frame,
             icon="📚",
+            tag="BIBLIOTHÈQUE",
             title="MES QUIZ",
             desc="Consulte tes quiz créés, rejoue à tes préférés ou exporte-les pour tes proches.",
             btn_text="BIBLIOTHÈQUE",
@@ -205,21 +210,38 @@ class HomePage(ctk.CTkFrame):
         )
         self.settings_btn.pack(side="right", padx=5)
 
-    def create_action_card(self, parent, icon, title, desc, btn_text, btn_color, hover_color, command, row, col):
-        """Créateur dynamique de carte UI moderne"""
-        card = ctk.CTkFrame(parent, fg_color="#1E222D", corner_radius=15, border_width=1, border_color="#2B303C")
+    def create_action_card(self, parent, icon, tag, title, desc, btn_text, btn_color, hover_color, command, row, col, badge=None):
+        """Créateur dynamique de carte UI moderne (v2 pro : liseré, badge icône, étiquette de catégorie)"""
+        card = ctk.CTkFrame(parent, fg_color="#1E222D", corner_radius=16, border_width=1, border_color="#2B303C")
         card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
 
-        # Zone contenu
-        content = ctk.CTkFrame(card, fg_color="transparent")
-        content.pack(fill="both", expand=True, padx=20, pady=15)
+        # Liseré supérieur coloré = identité visuelle de la carte
+        accent = ctk.CTkFrame(card, fg_color=btn_color, height=3, corner_radius=0)
+        accent.pack(fill="x", side="top")
 
-        # En-tête de carte (Icône + Titre)
-        lbl_icon = ctk.CTkLabel(content, text=icon, font=("Arial", 28))
-        lbl_icon.pack(anchor="w")
+        content = ctk.CTkFrame(card, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=20, pady=(14, 15))
+
+        # Ligne du haut : badge icône circulaire + étiquette "NOUVEAU" éventuelle
+        top_row = ctk.CTkFrame(content, fg_color="transparent")
+        top_row.pack(fill="x")
+
+        icon_badge = ctk.CTkFrame(top_row, fg_color=btn_color, corner_radius=14, width=48, height=48)
+        icon_badge.pack(side="left")
+        icon_badge.pack_propagate(False)
+        ctk.CTkLabel(icon_badge, text=icon, font=("Arial", 20)).pack(expand=True)
+
+        if badge:
+            ctk.CTkLabel(
+                top_row, text=badge, font=("Arial", 9, "bold"), text_color="#FFFFFF",
+                fg_color="#E53935", corner_radius=8
+            ).pack(side="right", ipadx=7, ipady=3)
+
+        # Étiquette de catégorie
+        ctk.CTkLabel(content, text=tag, font=("Arial", 9, "bold"), text_color=btn_color).pack(anchor="w", pady=(10, 0))
 
         lbl_title = ctk.CTkLabel(content, text=title, font=("Arial", 16, "bold"), text_color="#FFFFFF")
-        lbl_title.pack(anchor="w", pady=(5, 5))
+        lbl_title.pack(anchor="w", pady=(2, 5))
 
         lbl_desc = ctk.CTkLabel(content, text=desc, font=("Arial", 11), text_color="#AAAAAA", justify="left", wraplength=260)
         lbl_desc.pack(anchor="w", pady=(0, 10))
@@ -230,6 +252,7 @@ class HomePage(ctk.CTkFrame):
             text=btn_text,
             font=("Arial", 12, "bold"),
             height=38,
+            corner_radius=10,
             fg_color=btn_color,
             hover_color=hover_color,
             command=command
