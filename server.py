@@ -73,11 +73,16 @@ migrate = Migrate(app, db)
 import models
 
 # --------------------------------------------------------
-# 🔨 CRÉATION AUTOMATIQUE DES TABLES POSTGRESQL
+# 🔨 MIGRATION & CRÉATION DES TABLES POSTGRESQL
 # --------------------------------------------------------
 with app.app_context():
     db.create_all()
-    print("✅ Tables PostgreSQL créées ou vérifiées avec succès !")
+    # Ajout automatique des colonnes manquantes si la table existait déjà
+    with db.engine.connect() as conn:
+        conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0;"))
+        conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_base64 TEXT;"))
+        conn.commit()
+    print("✅ Base PostgreSQL à jour avec toutes les colonnes !")
 # --------------------------------------------------------
 
 # 3. Enregistrement des routes d'authentification et de scores
@@ -108,7 +113,6 @@ sid_to_player = {}
 
 def build_leaderboard(lobby):
     """Construit le classement complet : tous les joueurs de la salle,
-
     avec égalités = même rang (ex: 30, 20, 20 -> rangs 1, 2, 2).
     """
     scores = lobby.get("scores", {})
