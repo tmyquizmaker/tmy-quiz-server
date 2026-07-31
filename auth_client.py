@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageOps
 
 # URL par défaut pour vos tests locaux.
 # Peut aussi être surchargée via la variable d'environnement API_BASE_URL
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:5000")
+API_BASE_URL = os.environ.get("API_BASE_URL", "https://tmy-quiz-server.onrender.com")
 
 # Fichier local où l'on garde le refresh_token entre deux lancements de l'app.
 _SESSION_FILE = os.path.join(os.path.expanduser("~"), ".tmy_quiz_maker_session.json")
