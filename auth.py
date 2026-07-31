@@ -19,6 +19,7 @@ def _get_serializer():
 
 
 def _send_verification_email(user):
+    """Génère le token et envoie l'e-mail de vérification sans bloquer si SMTP échoue."""
     token = _get_serializer().dumps(user.email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
     lien = f"{current_app.config['APP_BASE_URL']}/auth/verify-email/{token}"
 
@@ -32,7 +33,14 @@ def _send_verification_email(user):
             "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message."
         ),
     )
-    mail.send(msg)
+    
+    try:
+        mail.send(msg)
+        current_app.logger.info("📧 E-mail de vérification envoyé avec succès à %s", user.email)
+        return True
+    except Exception as exc:
+        current_app.logger.error("❌ ÉCHEC D'ENVOI SMTP / BREVO pour %s : %s", user.email, exc)
+        return False
 
 
 @auth_bp.route("/register", methods=["POST"])
@@ -77,20 +85,43 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    try:
-        _send_verification_email(user)
-    except Exception as exc:  # noqa: BLE001 - on ne bloque pas l'inscription si le mail échoue
-        current_app.logger.error("Échec d'envoi de l'email de vérification: %s", exc)
+    # Envoi sécurisé de l'e-mail
+    mail_envoye = _send_verification_email(user)
+
+    if not mail_envoye:
         return jsonify({
-            "message": "Compte créé, mais l'email de vérification n'a pas pu être envoyé. "
-                       "Contactez le support ou redemandez un renvoi.",
+            "message": "Compte créé, mais l'e-mail de vérification n'a pas pu être envoyé. "
+                       "Vérifiez vos logs Render ou demandez un renvoi d'e-mail.",
             "user": user.to_public_dict(),
         }), 201
 
     return jsonify({
-        "message": "Compte créé. Vérifiez votre boîte mail pour valider votre adresse.",
+        "message": "Compte créé avec succès. Vérifiez votre boîte mail pour valider votre adresse.",
         "user": user.to_public_dict(),
     }), 201
+
+
+@auth_bp.route("/resend-verification", methods=["POST"])
+def resend_verification():
+    """Route permettant de demander le renvoi de l'e-mail de vérification."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return jsonify({"error": "Adresse e-mail requise"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "Aucun compte associé à cet e-mail"}), 404
+
+    if user.email_verified:
+        return jsonify({"message": "Votre e-mail est déjà vérifié. Vous pouvez vous connecter."}), 200
+
+    mail_envoye = _send_verification_email(user)
+    if mail_envoye:
+        return jsonify({"message": "Un nouvel e-mail de confirmation a été envoyé."}), 200
+    else:
+        return jsonify({"error": "Impossible d'envoyer l'e-mail pour le moment. Réessayez plus tard."}), 500
 
 
 def _html_page(titre, message, succes=True):
@@ -142,7 +173,7 @@ def verify_email(token):
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json(silent=True) or {}
-    identifiant = (data.get("identifiant") or "").strip()  # username OU email
+    identifiant = (data.get("identifiant") or "").strip()
     password = data.get("password") or ""
 
     if not identifiant or not password:
@@ -171,8 +202,6 @@ def login():
 @auth_bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
 def refresh():
-    """Le client (desktop/mobile) appelle ceci avec le refresh_token quand
-    l'access_token expire, pour éviter de redemander le mot de passe."""
     identity = get_jwt_identity()
     new_access_token = create_access_token(identity=identity)
     return jsonify({"access_token": new_access_token}), 200
@@ -187,8 +216,6 @@ def forgot_password():
         return jsonify({"error": "Email requis"}), 400
 
     user = User.query.filter_by(email=email).first()
-    # Réponse identique que l'utilisateur existe ou non, pour ne pas
-    # révéler quels emails sont enregistrés dans le système.
     reponse_generique = {
         "message": "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé."
     }
@@ -217,8 +244,6 @@ def forgot_password():
 
 @auth_bp.route("/reset-password/<token>", methods=["GET"])
 def reset_password_form(token):
-    """Petite page HTML avec un formulaire pour saisir le nouveau mot de passe,
-    qui soumet en JS vers POST /reset-password/<token> (API ci-dessous)."""
     return f"""
     <!DOCTYPE html>
     <html lang="fr">
@@ -257,7 +282,7 @@ def reset_password_submit(token):
         email = _get_serializer().loads(
             token,
             salt=current_app.config["SECURITY_PASSWORD_SALT"] + "-reset",
-            max_age=3600,  # 1h
+            max_age=3600,
         )
     except SignatureExpired:
         return jsonify({"error": "Ce lien a expiré, refaites une demande"}), 400
@@ -283,8 +308,6 @@ def upload_avatar():
     if not avatar_base64:
         return jsonify({"error": "Image manquante"}), 400
 
-    # Garde-fou de taille (l'image est déjà recadrée en 200x200 côté client,
-    # donc largement sous cette limite en usage normal).
     if len(avatar_base64) > 700_000:
         return jsonify({"error": "Image trop volumineuse"}), 400
 
