@@ -19,24 +19,59 @@ def _get_serializer():
 
 
 def _send_verification_email(user):
-    """Génère le token et envoie l'e-mail de vérification sans bloquer si SMTP échoue."""
+    """Génère le token et envoie un e-mail HTML optimisé pour éviter les spams."""
     token = _get_serializer().dumps(user.email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
     lien = f"{current_app.config['APP_BASE_URL']}/auth/verify-email/{token}"
 
     msg = Message(
-        subject="Vérifiez votre adresse email",
-        recipients=[user.email],
-        body=(
-            f"Bonjour {user.prenom},\n\n"
-            f"Confirmez votre inscription en cliquant sur ce lien "
-            f"(valable 24h) :\n{lien}\n\n"
-            "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message."
-        ),
+        subject="Confirmez votre inscription à TMY Quiz Maker",
+        recipients=[user.email]
     )
+    
+    # Texte brut de secours (obligatoire pour les filtres anti-spam)
+    msg.body = (
+        f"Bonjour {user.prenom},\n\n"
+        f"Bienvenue sur TMY Quiz Maker ! Veuillez confirmer votre adresse e-mail en cliquant sur le lien ci-dessous :\n\n"
+        f"{lien}\n\n"
+        f"Ce lien est valable 24 heures.\n"
+        f"Si vous n'êtes pas à l'origine de cette création de compte, vous pouvez ignorer cet e-mail."
+    )
+
+    # Design HTML propre pour que les boîtes mail (Gmail, Outlook) fassent confiance au message
+    msg.html = f"""
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }}
+            .container {{ max-width: 600px; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }}
+            h2 {{ color: #2c3e50; }}
+            p {{ color: #555555; line-height: 1.5; }}
+            .btn {{ display: inline-block; background-color: #0d9488; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin: 20px 0; }}
+            .footer {{ font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 15px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Bienvenue sur TMY Quiz Maker, {user.prenom} !</h2>
+            <p>Merci de vous être inscrit. Pour sécuriser votre compte et accéder à toutes les fonctionnalités, veuillez valider votre adresse e-mail en cliquant sur le bouton ci-dessous :</p>
+            
+            <a href="{lien}" class="btn" target="_blank">Valider mon adresse e-mail</a>
+            
+            <p>Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br><a href="{lien}">{lien}</a></p>
+            
+            <div class="footer">
+                <p>Ce lien est valable 24 heures. Si vous n'avez pas demandé la création de ce compte, veuillez ignorer cet e-mail.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
     
     try:
         mail.send(msg)
-        current_app.logger.info("📧 E-mail de vérification envoyé avec succès à %s", user.email)
+        current_app.logger.info("📧 E-mail de vérification HTML envoyé avec succès à %s", user.email)
         return True
     except Exception as exc:
         current_app.logger.error("❌ ÉCHEC D'ENVOI SMTP / BREVO pour %s : %s", user.email, exc)
@@ -85,7 +120,6 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    # Envoi sécurisé de l'e-mail
     mail_envoye = _send_verification_email(user)
 
     if not mail_envoye:
@@ -103,7 +137,6 @@ def register():
 
 @auth_bp.route("/resend-verification", methods=["POST"])
 def resend_verification():
-    """Route permettant de demander le renvoi de l'e-mail de vérification."""
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()
 
