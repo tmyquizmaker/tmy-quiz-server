@@ -28,13 +28,16 @@ class Config:
     SECURITY_PASSWORD_SALT = os.environ.get("SECURITY_PASSWORD_SALT", "change-moi-aussi")
     EMAIL_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24  # 24h pour cliquer le lien de vérification
 
-    # --- Envoi d'email (Flask-Mail), compatible avec n'importe quel SMTP ---
+   # --- Envoi d'email (Flask-Mail), compatible avec n'importe quel SMTP ---
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp-relay.brevo.com")
-    MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
-    MAIL_USE_TLS = True
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", 465))
+    
+    # Lecture dynamique de TLS / SSL depuis Render (avec valeurs par défaut sécurisées pour SSL/465)
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "false").lower() in ["true", "1"]
+    MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "true").lower() in ["true", "1"]
+    
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "no-reply@votre-app.com")
-
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "tmyquizmaker@gmail.com")
     # URL de base de votre app pour construire les liens de vérification/reset
     APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:5000")
