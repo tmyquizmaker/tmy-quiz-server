@@ -77,6 +77,13 @@ app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(scores_bp)
 
 # ========================================================
+# 🟢 ROUTE PING/PONG (Maintien en éveil Render)
+# ========================================================
+@app.route("/ping", methods=["GET"])
+def ping():
+    return "pong", 200
+
+# ========================================================
 # 🔌 INITIALISATION SOCKETIO & MOTEUR IA
 # ========================================================
 socketio = SocketIO(app, cors_allowed_origins="*")
