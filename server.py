@@ -72,6 +72,14 @@ migrate = Migrate(app, db)
 # Chargement des modèles pour la détection par Alembic / Flask-Migrate
 import models
 
+# --------------------------------------------------------
+# 🔨 CRÉATION AUTOMATIQUE DES TABLES POSTGRESQL
+# --------------------------------------------------------
+with app.app_context():
+    db.create_all()
+    print("✅ Tables PostgreSQL créées ou vérifiées avec succès !")
+# --------------------------------------------------------
+
 # 3. Enregistrement des routes d'authentification et de scores
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(scores_bp)
