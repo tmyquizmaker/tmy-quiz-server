@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+import requests
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from flask_mail import Message
@@ -19,62 +20,64 @@ def _get_serializer():
 
 
 def _send_verification_email(user):
-    """Génère le token et envoie un e-mail HTML optimisé pour éviter les spams."""
+    """Envoie l'e-mail de vérification via l'API HTTP de Brevo (Port 443 - Garanti sans blocage)."""
     token = _get_serializer().dumps(user.email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
     lien = f"{current_app.config['APP_BASE_URL']}/auth/verify-email/{token}"
 
-    msg = Message(
-        subject="Confirmez votre inscription à TMY Quiz Maker",
-        recipients=[user.email]
-    )
+    url = "https://api.brevo.com/v3/smtp/email"
     
-    # Texte brut de secours (obligatoire pour les filtres anti-spam)
-    msg.body = (
-        f"Bonjour {user.prenom},\n\n"
-        f"Bienvenue sur TMY Quiz Maker ! Veuillez confirmer votre adresse e-mail en cliquant sur le lien ci-dessous :\n\n"
-        f"{lien}\n\n"
-        f"Ce lien est valable 24 heures.\n"
-        f"Si vous n'êtes pas à l'origine de cette création de compte, vous pouvez ignorer cet e-mail."
-    )
+    headers = {
+        "accept": "application/json",
+        "api-key": current_app.config.get("MAIL_PASSWORD"),
+        "content-type": "application/json"
+    }
+    
+    payload = {
+        "sender": {"email": current_app.config.get("MAIL_DEFAULT_SENDER"), "name": "TMY Quiz Maker"},
+        "to": [{"email": user.email, "name": f"{user.prenom} {user.nom}"}],
+        "subject": "Confirmez votre inscription à TMY Quiz Maker",
+        "htmlContent": f"""
+            <!DOCTYPE html>
+            <html lang="fr">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }}
+                    .container {{ max-width: 600px; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }}
+                    h2 {{ color: #2c3e50; }}
+                    p {{ color: #555555; line-height: 1.5; }}
+                    .btn {{ display: inline-block; background-color: #0d9488; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin: 20px 0; }}
+                    .footer {{ font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 15px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>Bienvenue sur TMY Quiz Maker, {user.prenom} !</h2>
+                    <p>Merci de vous être inscrit. Pour sécuriser votre compte et accéder à toutes les fonctionnalités, veuillez valider votre adresse e-mail en cliquant sur le bouton ci-dessous :</p>
+                    
+                    <a href="{lien}" class="btn" target="_blank">Valider mon adresse e-mail</a>
+                    
+                    <p>Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br><a href="{lien}">{lien}</a></p>
+                    
+                    <div class="footer">
+                        <p>Ce lien est valable 24 heures. Si vous n'avez pas demandé la création de ce compte, veuillez ignorer cet e-mail.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        """
+    }
 
-    # Design HTML propre pour que les boîtes mail (Gmail, Outlook) fassent confiance au message
-    msg.html = f"""
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            body {{ font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }}
-            .container {{ max-width: 600px; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }}
-            h2 {{ color: #2c3e50; }}
-            p {{ color: #555555; line-height: 1.5; }}
-            .btn {{ display: inline-block; background-color: #0d9488; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin: 20px 0; }}
-            .footer {{ font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 15px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h2>Bienvenue sur TMY Quiz Maker, {user.prenom} !</h2>
-            <p>Merci de vous être inscrit. Pour sécuriser votre compte et accéder à toutes les fonctionnalités, veuillez valider votre adresse e-mail en cliquant sur le bouton ci-dessous :</p>
-            
-            <a href="{lien}" class="btn" target="_blank">Valider mon adresse e-mail</a>
-            
-            <p>Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br><a href="{lien}">{lien}</a></p>
-            
-            <div class="footer">
-                <p>Ce lien est valable 24 heures. Si vous n'avez pas demandé la création de ce compte, veuillez ignorer cet e-mail.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
     try:
-        mail.send(msg)
-        current_app.logger.info("📧 E-mail de vérification HTML envoyé avec succès à %s", user.email)
-        return True
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        if response.status_code in [200, 201, 202]:
+            current_app.logger.info("📧 E-mail de vérification envoyé avec succès via l'API HTTP Brevo à %s", user.email)
+            return True
+        else:
+            current_app.logger.error("❌ ÉCHEC API BREVO : %s", response.text)
+            return False
     except Exception as exc:
-        current_app.logger.error("❌ ÉCHEC D'ENVOI SMTP / BREVO pour %s : %s", user.email, exc)
+        current_app.logger.error("❌ ERREUR REQUÊTE API BREVO pour %s : %s", user.email, exc)
         return False
 
 
