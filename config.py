@@ -1,14 +1,14 @@
 import os
 from datetime import timedelta
 
-api_key = os.environ.get("GEMINI_API_KEY")
+# Utilise API_KEY en majuscules pour correspondre à tes autres imports
+API_KEY = os.environ.get("GEMINI_API_KEY")
 
 MODELS = [
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-flash-latest"
 ]
-
 
 class Config:
     # --- Base de données ---

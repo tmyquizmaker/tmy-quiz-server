@@ -19,7 +19,12 @@ Fonctions :
 
 from google import genai
 
-from config import API_KEY, MODELS
+# ✅ Nouvelle version corrigée :
+import os
+from config import MODELS
+
+# Récupère la clé directement depuis l'environnement Render / .env
+API_KEY = os.environ.get("GEMINI_API_KEY")
 
 import json
 
