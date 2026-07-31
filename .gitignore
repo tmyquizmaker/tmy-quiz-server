@@ -1,2 +1,32 @@
+# Configuration et clés secrètes (CRITIQUE : NE JAMAIS ENVOYER SUR GITHUB)
+.env
+.env.*
+*.env
+
+# Base de données locale (fichiers SQLite)
+*.db
+*.sqlite3
+local_fallback.db
+instance/
+
+# Environnements virtuels Python
+venv/
+.venv/
+env/
+ENV/
+
+# Fichiers temporaires et cache Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Configurations d'éditeurs (VS Code, PyCharm, etc.)
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS (Mac / Windows)
+.DS_Store
+Thumbs.db

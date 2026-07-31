@@ -9,8 +9,10 @@ result.py
 """
 
 import os
+from datetime import datetime
 import customtkinter as ctk
-from PIL import Image
+from tkinter import filedialog
+from PIL import Image, ImageGrab
 
 from ui.colors import *
 from ui.buttons import LargeButton
@@ -198,6 +200,18 @@ class ResultPage(ctk.CTkFrame):
         )
         self.regenerate_button.pack(side="left", expand=True, fill="x", padx=5)
 
+        # Télécharger le résultat en image
+        self.download_button = ctk.CTkButton(
+            self.actions_frame,
+            text="💾 TÉLÉCHARGER",
+            font=("Arial", 13, "bold"),
+            height=45,
+            fg_color="#008080",
+            hover_color="#004D4D",
+            command=self.telecharger_resultat
+        )
+        self.download_button.pack(side="left", expand=True, fill="x", padx=5)
+
         # Mes Quiz (si présent)
         if self.quiz_callback:
             self.quiz_button = ctk.CTkButton(
@@ -222,6 +236,42 @@ class ResultPage(ctk.CTkFrame):
             command=self.home_callback
         )
         self.home_button.pack(side="left", expand=True, fill="x", padx=5)
+
+    def telecharger_resultat(self):
+        """Capture la carte d'en-tête + les statistiques (sans les boutons d'action)
+        et l'enregistre comme image PNG, au choix de l'utilisateur."""
+        # On cache temporairement les boutons pour qu'ils n'apparaissent pas sur l'image
+        self.actions_frame.pack_forget()
+        self.update_idletasks()
+
+        try:
+            x = self.header_card.winfo_rootx()
+            y = self.header_card.winfo_rooty()
+            x2 = self.stats_grid.winfo_rootx() + self.stats_grid.winfo_width()
+            y2 = self.stats_grid.winfo_rooty() + self.stats_grid.winfo_height()
+
+            image = ImageGrab.grab(bbox=(x, y, x2, y2))
+        except Exception as e:
+            print(f"⚠️ Erreur lors de la capture du résultat : {e}")
+            image = None
+        finally:
+            # On réaffiche les boutons dans tous les cas
+            self.actions_frame.pack(fill="x", pady=(20, 0))
+
+        if image is None:
+            return
+
+        nom_defaut = f"resultat_tmy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        chemin = filedialog.asksaveasfilename(
+            title="Enregistrer le résultat",
+            defaultextension=".png",
+            initialfile=nom_defaut,
+            filetypes=[("Image PNG", "*.png")],
+        )
+        if not chemin:
+            return
+
+        image.save(chemin, "PNG")
 
     def create_stat_card(self, parent, title, value, sub_text, color, row, col):
         """Méthode utilitaire pour créer une carte de statistique propre"""

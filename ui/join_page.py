@@ -8,6 +8,7 @@ join_page.py - Page complète pour rejoindre une salle
 """
 
 import customtkinter as ctk
+from auth_client import session
 
 
 class JoinRoomPage(ctk.CTkFrame):
@@ -62,6 +63,14 @@ class JoinRoomPage(ctk.CTkFrame):
         ctk.CTkLabel(self.form_card, text="Ton Prénom :", font=("Arial", 12, "bold"), text_color="#AAAAAA").pack(anchor="w", padx=30)
         self.prenom_entry = ctk.CTkEntry(self.form_card, placeholder_text="Ex: Marc", font=("Arial", 13), fg_color="#121620", border_color="#2B303C", height=42, width=320)
         self.prenom_entry.pack(padx=30, pady=(4, 15))
+
+        # Si l'utilisateur est connecté, son nom/prénom sont déjà connus :
+        # on les préremplit et on verrouille les champs pour éviter toute confusion d'identité.
+        if session.est_connecte():
+            self.nom_entry.insert(0, session.user.get("nom", ""))
+            self.nom_entry.configure(state="disabled")
+            self.prenom_entry.insert(0, session.user.get("prenom", ""))
+            self.prenom_entry.configure(state="disabled")
 
         # Champ Sujet (uniquement pour le mode "Questions entre amis")
         if self.demander_sujet:

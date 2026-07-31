@@ -21,7 +21,9 @@ Aucune information technique
 
 import pygame
 import customtkinter as ctk
+from dotenv import load_dotenv
 
+load_dotenv()  # Charge les variables définies dans votre fichier .env
 from core.app_controller import AppController
 from audio.music import start_music
 

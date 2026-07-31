@@ -25,7 +25,7 @@ except Exception as e:
 
 class PlayQuizPage(ctk.CTkFrame):
 
-    def __init__(self, master, quiz, finish_callback, quiz_title="Quiz Solo"):
+    def __init__(self, master, quiz, finish_callback, quiz_title="Quiz Solo", cancel_callback=None):
         super().__init__(master)
 
         # Extraction prioritaire du sujet / titre du quiz
@@ -37,6 +37,7 @@ class PlayQuizPage(ctk.CTkFrame):
             self.quiz_title = quiz_title
 
         self.finish_callback = finish_callback
+        self.cancel_callback = cancel_callback
 
         self.index = 0
         self.score = 0
@@ -103,6 +104,19 @@ class PlayQuizPage(ctk.CTkFrame):
             text_color="#1F6AA5"
         )
         self.title_lbl.pack(side="left")
+
+        # Bouton Annuler (avec confirmation) : n'enregistre ni l'XP ni l'historique
+        self.cancel_button = ctk.CTkButton(
+            self.header_frame,
+            text="✖ Annuler",
+            font=("Arial", 12, "bold"),
+            width=90,
+            height=30,
+            fg_color="#3A3D52",
+            hover_color="#C62828",
+            command=self.demander_annulation
+        )
+        self.cancel_button.pack(side="left", padx=(15, 0))
 
         # Statut Rang / Combo / XP à droite
         self.stats_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
@@ -593,6 +607,63 @@ class PlayQuizPage(ctk.CTkFrame):
 
     def stop_timer(self):
         self.timer_running = False
+
+    # =========================================
+    # Annulation du quiz en cours
+    # =========================================
+    def demander_annulation(self):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Annuler le quiz ?")
+        dialog.geometry("360x180")
+        dialog.configure(fg_color="#1E222D")
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        dialog.grab_set()
+
+        ctk.CTkLabel(
+            dialog,
+            text="Voulez-vous vraiment annuler ce quiz ?",
+            font=("Arial", 13, "bold"),
+            text_color="#FFFFFF",
+            wraplength=300,
+        ).pack(pady=(24, 6), padx=20)
+
+        ctk.CTkLabel(
+            dialog,
+            text="Votre progression et l'XP gagnée ne seront pas enregistrées.",
+            font=("Arial", 11),
+            text_color="#AAAAAA",
+            wraplength=300,
+            justify="center",
+        ).pack(pady=(0, 18), padx=20)
+
+        btn_row = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_row.pack()
+
+        ctk.CTkButton(
+            btn_row, text="Continuer le quiz", fg_color="#2B2D42", hover_color="#3A3D52",
+            width=140, command=dialog.destroy,
+        ).pack(side="left", padx=8)
+        ctk.CTkButton(
+            btn_row, text="Annuler le quiz", fg_color="#C62828", hover_color="#8E1E1E",
+            width=140, command=lambda: self._confirmer_annulation(dialog),
+        ).pack(side="left", padx=8)
+
+    def _confirmer_annulation(self, dialog):
+        dialog.destroy()
+
+        # Coupe immédiatement tout ce qui pourrait continuer en arrière-plan
+        # (chronomètre, séquence vocale) — les méthodes de lecture vérifient déjà
+        # self.answered / self.quiz_finished et s'arrêtent d'elles-mêmes.
+        stop()
+        self.answered = True
+        self.timer_running = False
+        self.quiz_finished = True
+
+        # Volontairement : on n'appelle PAS finish_quiz() ici, donc ni l'historique
+        # (data/history.json) ni le score/XP ne sont enregistrés pour ce quiz annulé.
+        if self.cancel_callback:
+            self.cancel_callback()
 
     def update_timer_display(self):
         if self.current_time == 0:

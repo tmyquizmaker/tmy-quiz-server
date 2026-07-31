@@ -79,5 +79,47 @@
             "difficulty": "easy",
             "time": 15
         }
+    ],
+    [
+        {
+            "question": "Quel phénomène optique se produit quand la lumière change de direction en passant d'un milieu transparent à un autre ?",
+            "A": "Réfraction",
+            "B": "Réflexion",
+            "C": "Diffraction",
+            "D": "Dispersion",
+            "correct": "A",
+            "difficulty": "medium",
+            "time": 18
+        },
+        {
+            "question": "Quelle quantité physique mesure le taux auquel l'énergie est transférée ou convertie par unité de temps ?",
+            "A": "Énergie cinétique",
+            "B": "Travail",
+            "C": "Puissance",
+            "D": "Pression",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 18
+        },
+        {
+            "question": "Comment nomme-t-on le principe selon lequel un corps immergé reçoit une poussée vers le haut égale au poids du fluide déplacé ?",
+            "A": "Loi de Pascal",
+            "B": "Principe d'Archimède",
+            "C": "Loi de Bernoulli",
+            "D": "Loi de Boyle-Mariotte",
+            "correct": "B",
+            "difficulty": "medium",
+            "time": 25
+        },
+        {
+            "question": "Quelle est la relation fondamentale entre la fréquence (f) et la période (T) d'une onde vibratoire ?",
+            "A": "f = 1/T",
+            "B": "f = T",
+            "C": "f = T²",
+            "D": "f = 2T",
+            "correct": "A",
+            "difficulty": "medium",
+            "time": 15
+        }
     ]
 ]

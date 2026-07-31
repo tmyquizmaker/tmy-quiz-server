@@ -47,6 +47,11 @@ client = genai.Client(
 )
 
 
+# Fichier où sont mémorisées TOUTES les questions déjà générées (jouées ou non),
+# pour empêcher les répétitions même quand on régénère sans terminer le quiz précédent.
+GENERATED_CACHE_FILE = os.path.join("data", "generated_questions_cache.json")
+
+
 class AIGenerator:
 
 
@@ -57,6 +62,34 @@ class AIGenerator:
 
         # Détection automatique de l'appareil
         self.device_profile = self.detect_device_profile()
+
+        # ======================================
+    # Cache anti-répétition (toutes questions générées, jouées ou non)
+    # ======================================
+
+    def _load_generated_cache(self):
+        if not os.path.exists(GENERATED_CACHE_FILE):
+            return []
+        try:
+            with open(GENERATED_CACHE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    def _add_to_generated_cache(self, questions):
+        cache = self._load_generated_cache()
+        nouveaux = [q.get("question", "") for q in questions if q.get("question")]
+        cache.extend(nouveaux)
+
+        # Garde uniquement les 300 dernières pour ne pas alourdir le prompt indéfiniment
+        cache = cache[-300:]
+
+        os.makedirs("data", exist_ok=True)
+        try:
+            with open(GENERATED_CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(cache, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"⚠️ Impossible d'enregistrer le cache anti-répétition : {e}")
 
         # ======================================
     # Détection automatique appareil
@@ -138,6 +171,10 @@ class AIGenerator:
             self.history_manager.get_used_questions()
 
         )
+
+        # Fusion avec le cache de TOUTES les questions déjà générées (jouées ou non) :
+        # sans ça, régénérer avant d'avoir terminé un quiz montrait les mêmes questions.
+        anciennes_questions = list(anciennes_questions) + self._load_generated_cache()
 
 
 
@@ -239,7 +276,9 @@ class AIGenerator:
 
         )
 
-
+        # Alimente le cache anti-répétition immédiatement, même si l'utilisateur
+        # ne termine pas ce quiz — sinon régénérer tout de suite après reverrait les mêmes questions.
+        self._add_to_generated_cache(questions)
 
         if questions and sauvegarder:
 

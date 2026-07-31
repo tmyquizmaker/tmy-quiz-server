@@ -15,6 +15,14 @@ class User(db.Model):
     email_verified = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    # --- XP & progression : accumulé à chaque quiz joué (voir scores.py) ---
+    xp = db.Column(db.Integer, default=0, nullable=False)
+
+    # --- Photo de profil, stockée en base (PNG encodé en base64, ~200x200) ---
+    # Choix volontaire plutôt qu'un fichier sur disque : sur Render, le disque
+    # n'est pas persistant entre les redéploiements, alors que la base l'est.
+    avatar_base64 = db.Column(db.Text, nullable=True)
+
     scores = db.relationship("GameHistory", backref="user", lazy=True)
 
     def to_public_dict(self):
@@ -26,6 +34,9 @@ class User(db.Model):
             "username": self.username,
             "email": self.email,
             "email_verified": self.email_verified,
+            "xp": self.xp,
+            "niveau": 1 + (self.xp // 1000),  # 1000 XP par niveau — ajustez ici si besoin
+            "avatar_base64": self.avatar_base64,
         }
 
 

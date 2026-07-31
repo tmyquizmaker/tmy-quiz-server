@@ -20,7 +20,7 @@ def _get_serializer():
 
 def _send_verification_email(user):
     token = _get_serializer().dumps(user.email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
-    lien = f"{current_app.config['APP_BASE_URL']}/verify-email/{token}"
+    lien = f"{current_app.config['APP_BASE_URL']}/auth/verify-email/{token}"
 
     msg = Message(
         subject="Vérifiez votre adresse email",
@@ -196,7 +196,7 @@ def forgot_password():
         return jsonify(reponse_generique), 200
 
     token = _get_serializer().dumps(user.email, salt=current_app.config["SECURITY_PASSWORD_SALT"] + "-reset")
-    lien = f"{current_app.config['APP_BASE_URL']}/reset-password/{token}"
+    lien = f"{current_app.config['APP_BASE_URL']}/auth/reset-password/{token}"
 
     try:
         msg = Message(
@@ -272,6 +272,30 @@ def reset_password_submit(token):
     db.session.commit()
 
     return jsonify({"message": "Mot de passe mis à jour avec succès."}), 200
+
+
+@auth_bp.route("/avatar", methods=["POST"])
+@jwt_required()
+def upload_avatar():
+    data = request.get_json(silent=True) or {}
+    avatar_base64 = data.get("avatar_base64")
+
+    if not avatar_base64:
+        return jsonify({"error": "Image manquante"}), 400
+
+    # Garde-fou de taille (l'image est déjà recadrée en 200x200 côté client,
+    # donc largement sous cette limite en usage normal).
+    if len(avatar_base64) > 700_000:
+        return jsonify({"error": "Image trop volumineuse"}), 400
+
+    user = User.query.get(get_jwt_identity())
+    if not user:
+        return jsonify({"error": "Utilisateur introuvable"}), 404
+
+    user.avatar_base64 = avatar_base64
+    db.session.commit()
+
+    return jsonify({"message": "Photo de profil mise à jour.", "user": user.to_public_dict()}), 200
 
 
 @auth_bp.route("/me", methods=["GET"])

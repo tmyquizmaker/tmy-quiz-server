@@ -1,5 +1,68 @@
 [
     {
+        "id": 8,
+        "mode": "Solo",
+        "sujet": "Quiz Solo",
+        "niveau": "Moyen",
+        "score": 2,
+        "total": 4,
+        "percentage": 50,
+        "xp": 2286,
+        "rank": "🥉 3ème",
+        "average_time": 6.5,
+        "questions": [
+            {
+                "question": "Quel phénomène optique se produit quand la lumière change de direction en passant d'un milieu transparent à un autre ?",
+                "options": [
+                    "A. Réfraction",
+                    "B. Réflexion",
+                    "C. Diffraction",
+                    "D. Dispersion"
+                ],
+                "user_answer": "B. Réflexion",
+                "correct_answer": "A. Réfraction",
+                "is_correct": false
+            },
+            {
+                "question": "Quelle quantité physique mesure le taux auquel l'énergie est transférée ou convertie par unité de temps ?",
+                "options": [
+                    "A. Énergie cinétique",
+                    "B. Travail",
+                    "C. Puissance",
+                    "D. Pression"
+                ],
+                "user_answer": "A. Énergie cinétique",
+                "correct_answer": "C. Puissance",
+                "is_correct": false
+            },
+            {
+                "question": "Comment nomme-t-on le principe selon lequel un corps immergé reçoit une poussée vers le haut égale au poids du fluide déplacé ?",
+                "options": [
+                    "A. Loi de Pascal",
+                    "B. Principe d'Archimède",
+                    "C. Loi de Bernoulli",
+                    "D. Loi de Boyle-Mariotte"
+                ],
+                "user_answer": "B. Principe d'Archimède",
+                "correct_answer": "B. Principe d'Archimède",
+                "is_correct": true
+            },
+            {
+                "question": "Quelle est la relation fondamentale entre la fréquence (f) et la période (T) d'une onde vibratoire ?",
+                "options": [
+                    "A. f = 1/T",
+                    "B. f = T",
+                    "C. f = T²",
+                    "D. f = 2T"
+                ],
+                "user_answer": "A. f = 1/T",
+                "correct_answer": "A. f = 1/T",
+                "is_correct": true
+            }
+        ],
+        "date": "30/07/2026 00:03"
+    },
+    {
         "id": 7,
         "mode": "Solo",
         "sujet": "Quiz Solo",

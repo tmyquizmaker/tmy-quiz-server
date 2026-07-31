@@ -13,6 +13,7 @@ from PIL import Image
 
 import ui.colors as colors
 import ui.fonts as fonts
+from auth_client import session
 
 
 class HomePage(ctk.CTkFrame):
@@ -26,7 +27,7 @@ class HomePage(ctk.CTkFrame):
         multiplayer_callback=None,
         join_callback=None,
         settings_callback=None,
-        stats_callback=None
+        account_callback=None
     ):
         super().__init__(master)
 
@@ -36,7 +37,7 @@ class HomePage(ctk.CTkFrame):
         self.multiplayer_callback = multiplayer_callback
         self.join_callback = join_callback
         self.settings_callback = settings_callback
-        self.stats_callback = stats_callback
+        self.account_callback = account_callback
 
         self.configure(fg_color=colors.BACKGROUND)
 
@@ -90,17 +91,44 @@ class HomePage(ctk.CTkFrame):
         )
         self.subtitle.pack(anchor="w")
 
-        # Badge Joueur / XP (En haut à droite)
-        self.player_badge = ctk.CTkFrame(self.header_content, fg_color="#121620", corner_radius=10)
-        self.player_badge.pack(side="right", padx=10)
-
-        self.xp_label = ctk.CTkLabel(
-            self.player_badge,
-            text="🏆 NIVEAU 1  •  0 XP",
+        # Badge Joueur / XP cliquable (ouvre le compte, ou la connexion si non connecté)
+        user = session.user or {}
+        niveau = user.get("niveau", 1)
+        xp = user.get("xp", 0)
+        badge_kwargs = dict(
             font=("Arial", 12, "bold"),
-            text_color="#FFD700"
+            text_color="#FFD700",
+            fg_color="#121620",
+            hover_color="#1B2030",
+            corner_radius=10,
+            height=36,
+            command=self.open_account,
         )
-        self.xp_label.pack(padx=15, pady=8)
+        avatar_img = session.avatar_image() if session.est_connecte() else None
+        if avatar_img:
+            self._avatar_ctk_img = ctk.CTkImage(light_image=avatar_img, dark_image=avatar_img, size=(24, 24))
+            self.player_badge = ctk.CTkButton(
+                self.header_content, text=f"  NIVEAU {niveau}  •  {xp} XP",
+                image=self._avatar_ctk_img, compound="left", **badge_kwargs,
+            )
+        else:
+            self.player_badge = ctk.CTkButton(
+                self.header_content, text=f"👤 NIVEAU {niveau}  •  {xp} XP", **badge_kwargs,
+            )
+        self.player_badge.pack(side="right", padx=(6, 10))
+
+        # Icône Paramètres (⚙️), séparée du badge compte
+        self.settings_icon_btn = ctk.CTkButton(
+            self.header_content,
+            text="⚙️",
+            font=("Arial", 15),
+            width=36, height=36,
+            fg_color="#121620",
+            hover_color="#1B2030",
+            corner_radius=10,
+            command=self.settings
+        )
+        self.settings_icon_btn.pack(side="right", padx=(0, 4))
 
         # =========================================================
         # 2. GRILLE DE SÉLECTION DE MODE DE JEU (2x2)
@@ -186,30 +214,6 @@ class HomePage(ctk.CTkFrame):
         )
         self.join_code_btn.pack(side="left", padx=5)
 
-        # Bouton Statistiques Globales
-        self.stats_btn = ctk.CTkButton(
-            self.footer_frame,
-            text="📊 STATISTIQUES",
-            font=("Arial", 12, "bold"),
-            height=40,
-            fg_color="#3A3D52",
-            hover_color="#232533",
-            command=self.open_stats
-        )
-        self.stats_btn.pack(side="right", padx=5)
-
-        # Bouton Paramètres
-        self.settings_btn = ctk.CTkButton(
-            self.footer_frame,
-            text="⚙️ PARAMÈTRES",
-            font=("Arial", 12, "bold"),
-            height=40,
-            fg_color="#3A3D52",
-            hover_color="#232533",
-            command=self.settings
-        )
-        self.settings_btn.pack(side="right", padx=5)
-
     def create_action_card(self, parent, icon, tag, title, desc, btn_text, btn_color, hover_color, command, row, col, badge=None):
         """Créateur dynamique de carte UI moderne (v2 pro : liseré, badge icône, étiquette de catégorie)"""
         card = ctk.CTkFrame(parent, fg_color="#1E222D", corner_radius=16, border_width=1, border_color="#2B303C")
@@ -290,11 +294,11 @@ class HomePage(ctk.CTkFrame):
         else:
             print("Saisie du code de salon multijoueur")
 
-    def open_stats(self):
-        if self.stats_callback:
-            self.stats_callback()
+    def open_account(self):
+        if self.account_callback:
+            self.account_callback()
         else:
-            print("Ouverture Statistiques Profil")
+            print("Ouverture Compte / Connexion")
 
     def settings(self):
         if self.settings_callback:

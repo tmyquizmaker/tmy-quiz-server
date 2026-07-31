@@ -188,6 +188,15 @@ class QuizLobbyPage(ctk.CTkFrame):
             lbl.pack(side="left", padx=5)
 
     def launch_quiz(self):
-        """Lancement manuel par l'hôte uniquement"""
+        """Lancement manuel par l'hôte uniquement — bouton à USAGE UNIQUE.
+        Après le clic, l'hôte n'a plus aucune action possible ici : le bouton
+        se désactive et redevient inerte (l'hôte devient un joueur normal
+        pour la suite de la partie)."""
         if self.is_host and self.start_quiz_callback:
             self.start_quiz_callback()
+            if hasattr(self, "start_btn"):
+                self.start_btn.configure(
+                    state="disabled",
+                    text="⏳ Partie en cours de lancement...",
+                    fg_color="#2B2D42"
+                )

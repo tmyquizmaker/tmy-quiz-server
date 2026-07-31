@@ -1,7 +1,7 @@
 """
 ===========================================
 TMY Quiz Maker
-Version 5.1
+Version 5.2
 
 leaderboard_overlay.py - Affichage des rangs en direct (Élève & Créateur)
 ===========================================
@@ -11,34 +11,43 @@ import customtkinter as ctk
 
 
 class StudentRankWidget(ctk.CTkFrame):
-    """Affiche le Top 3 et le rang actuel du joueur s'il est au-delà du rang 3."""
+    """Carte compacte de classement en direct : médailles pour le Top 3
+    + le rang de l'utilisateur courant s'il n'y figure pas."""
+
+    MEDAILLES = {1: "🥇", 2: "🥈", 3: "🥉"}
+    ACCENTS = {1: "#FFD700", 2: "#C7CDD8", 3: "#D08A4C"}
+    ACCENT_MOI = "#00B4D8"
+    ACCENT_DEFAUT = "#3A3F4E"
 
     def __init__(self, master, current_player_name="Moi"):
         super().__init__(
             master,
-            fg_color="#1E222D",
-            corner_radius=12,
+            fg_color="#161A24",
+            corner_radius=14,
             border_width=1,
-            border_color="#2B303C",
+            border_color="#252A38",
         )
         self.current_player_name = current_player_name
         self._rows_cache = []  # Pour réutiliser les widgets sans détruire l'UI
 
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.pack(fill="x", padx=14, pady=(10, 6))
+
         ctk.CTkLabel(
-            self,
-            text="🏆 RANG EN DIRECT",
-            font=("Arial", 11, "bold"),
+            header,
+            text="🔥 QUI PREND LA TÊTE ?",
+            font=("Arial", 12, "bold"),
             text_color="#FFD700",
-        ).pack(pady=(8, 4), padx=12)
+        ).pack(side="left")
 
         self.list_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.list_frame.pack(fill="x", padx=8, pady=(0, 8))
+        self.list_frame.pack(fill="x", padx=10, pady=(0, 10))
 
         self.empty_label = ctk.CTkLabel(
             self.list_frame,
-            text="En attente des résultats...",
+            text="⏳ Le duel commence bientôt...",
             font=("Arial", 10, "italic"),
-            text_color="#AAAAAA",
+            text_color="#6B7280",
         )
 
     def update_ranks(self, leaderboard_data):
@@ -48,7 +57,7 @@ class StudentRankWidget(ctk.CTkFrame):
         """
         if not leaderboard_data:
             self._clear_rows()
-            self.empty_label.pack(pady=4)
+            self.empty_label.pack(pady=6)
             return
 
         self.empty_label.pack_forget()
@@ -82,62 +91,88 @@ class StudentRankWidget(ctk.CTkFrame):
         # Mise à jour des widgets existants sans les détruire
         for idx, item in enumerate(display_list):
             widgets = self._rows_cache[idx]
-            frame, left_label, right_label, sep_label = (
+            frame, badge, name_lbl, xp_lbl, sep_label = (
                 widgets["frame"],
-                widgets["left_label"],
-                widgets["right_label"],
+                widgets["badge"],
+                widgets["name_lbl"],
+                widgets["xp_lbl"],
                 widgets["sep_label"],
             )
 
             if item.get("is_separator"):
                 frame.pack_forget()
-                sep_label.pack(pady=1)
-            else:
-                sep_label.pack_forget()
-                is_me = item["name"] == self.current_player_name
-                bg_col = "#1F6AA5" if is_me else "#121620"
-                frame.configure(fg_color=bg_col)
+                sep_label.pack(pady=2)
+                continue
 
-                rank_suffix = "er" if item["rank"] == 1 else "ème"
-                name_suffix = " (Moi)" if is_me else ""
-                rank_str = f"{item['rank']}{rank_suffix} {item['name']}{name_suffix}"
+            sep_label.pack_forget()
 
-                left_label.configure(text=rank_str)
-                right_label.configure(text=f"{item['xp']} XP")
-                frame.pack(fill="x", pady=2)
+            rang = item.get("rank", idx + 1)
+            is_me = item["name"] == self.current_player_name
+            medaille = self.MEDAILLES.get(rang, f"#{rang}")
+            accent = self.ACCENT_MOI if is_me else self.ACCENTS.get(rang, self.ACCENT_DEFAUT)
+
+            frame.configure(
+                fg_color="#1B2E3D" if is_me else "#1B1F2B",
+                border_color=accent,
+                border_width=2 if (rang in self.MEDAILLES or is_me) else 1,
+            )
+            badge.configure(text=medaille, text_color=accent)
+
+            nom_affiche = item["name"] + ("  •  Toi" if is_me else "")
+            name_lbl.configure(
+                text=nom_affiche,
+                text_color="#FFFFFF" if (is_me or rang in self.MEDAILLES) else "#C4C9D4",
+            )
+            xp_lbl.configure(text=f"{item.get('xp', 0)} XP")
+
+            frame.pack(fill="x", pady=3)
 
     def _sync_rows_cache(self, required_count):
         """Ajuste le nombre de conteneurs de lignes réutilisables."""
         while len(self._rows_cache) < required_count:
             row_frame = ctk.CTkFrame(
-                self.list_frame, fg_color="#121620", corner_radius=6
+                self.list_frame,
+                fg_color="#1B1F2B",
+                corner_radius=8,
+                border_width=1,
+                border_color="#2B303C",
+                height=34,
             )
-            lbl_left = ctk.CTkLabel(
+            row_frame.pack_propagate(False)
+
+            badge = ctk.CTkLabel(
+                row_frame, text="", font=("Arial", 13, "bold"), width=24,
+            )
+            badge.pack(side="left", padx=(10, 6))
+
+            name_lbl = ctk.CTkLabel(
                 row_frame,
                 text="",
-                font=("Arial", 10, "bold"),
+                font=("Arial", 11, "bold"),
                 text_color="#FFFFFF",
+                anchor="w",
             )
-            lbl_left.pack(side="left", padx=8, pady=4)
+            name_lbl.pack(side="left", fill="x", expand=True)
 
-            lbl_right = ctk.CTkLabel(
-                row_frame, text="", font=("Arial", 10), text_color="#FFD700"
+            xp_lbl = ctk.CTkLabel(
+                row_frame, text="", font=("Arial", 10, "bold"), text_color="#FFD700"
             )
-            lbl_right.pack(side="right", padx=8)
+            xp_lbl.pack(side="right", padx=10)
 
-            lbl_sep = ctk.CTkLabel(
+            sep_label = ctk.CTkLabel(
                 self.list_frame,
-                text="• • •",
-                font=("Arial", 8),
-                text_color="#AAAAAA",
+                text="⋯",
+                font=("Arial", 10, "bold"),
+                text_color="#4B5563",
             )
 
             self._rows_cache.append(
                 {
                     "frame": row_frame,
-                    "left_label": lbl_left,
-                    "right_label": lbl_right,
-                    "sep_label": lbl_sep,
+                    "badge": badge,
+                    "name_lbl": name_lbl,
+                    "xp_lbl": xp_lbl,
+                    "sep_label": sep_label,
                 }
             )
 

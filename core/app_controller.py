@@ -9,32 +9,37 @@ Contrôle navigation + gestion des quiz locaux + Lobby Multijoueur
 ===========================================
 """
 
+import threading
 from datetime import datetime
 from tkinter import filedialog, messagebox
-import threading
+
 import customtkinter as ctk
 
-from ui.loading import LoadingScreen
-from ui.home import HomePage
-from ui.tmy_generator import TMYGeneratorPage
-from audio.music import stop_music, resume_music
-from ui.play_quiz import PlayQuizPage
-from ui.play_quiz_manuel import PlayQuizManuelPage  # 👈 CÔTÉ ÉLÈVE
-from ui.result import ResultPage
-from ui.quiz_loading import QuizLoadingPage
 from ai.ai_generator import AIGenerator
-
-from data.quiz_storage import save_quiz
-from ui.my_quizzes import MyQuizzesPage
-from ui.quiz_lobby import QuizLobbyPage
-from ui.join_page import JoinRoomPage
-from ui.leaderboard_overlay import TeacherFullDashboard
+from audio.music import resume_music, stop_music
 from core.network import NetworkClient
+from data.quiz_storage import save_quiz
 from library_hub import LibraryHubWindow
 
+from ui.home import HomePage
+from ui.join_page import JoinRoomPage
+from ui.leaderboard_overlay import TeacherFullDashboard
 from ui.levels_menu import LevelsMenuPage
+from ui.loading import LoadingScreen
+from ui.my_quizzes import MyQuizzesPage
 from ui.party_create import PartyCreatePage
 from ui.party_game import PartyGamePage
+from ui.play_quiz import PlayQuizPage
+from ui.play_quiz_manuel import PlayQuizManuelPage  # 👈 CÔTÉ ÉLÈVE
+from ui.quiz_loading import QuizLoadingPage
+from ui.quiz_lobby import QuizLobbyPage
+from ui.result import ResultPage
+from ui.tmy_generator import TMYGeneratorPage
+
+from ui.auth_page import AuthPage
+from ui.settings_page import SettingsPage
+from ui.account_page import AccountPage
+from auth_client import session
 
 try:
     from ui.manual_quiz import ManualQuizPage
@@ -117,13 +122,45 @@ class AppController:
             multiplayer_callback=self.show_multiplayer,
             join_callback=self.show_join_room,
             settings_callback=self.show_settings,
-            stats_callback=self.show_stats
+            account_callback=self.show_account
         )
 
         self.home.pack(fill="both", expand=True)
 
+    # =====================================
+    # Authentification (page complète, pas un popup)
+    # =====================================
+    def show_auth_page(self, on_success=None):
+        """Affiche la page de connexion/inscription. Une fois connecté, exécute
+        on_success (l'action que l'utilisateur voulait faire à l'origine), ou
+        revient à l'accueil si aucune action n'était en attente."""
+        self.clear_page()
+        self.auth_page = AuthPage(
+            self.root,
+            on_success=lambda: self._apres_connexion(on_success),
+            back_callback=self.show_home,
+        )
+        self.auth_page.pack(fill="both", expand=True)
+
+    def _apres_connexion(self, on_success):
+        if on_success:
+            on_success()
+        else:
+            self.show_home()
+
+    def _requires_login(self, callback):
+        """Exécute callback directement si connecté, sinon ouvre la page d'authentification."""
+        if session.est_connecte():
+            callback()
+        else:
+            self.show_auth_page(on_success=callback)
+
     # --- Callbacks complémentaires ---
     def show_multiplayer(self):
+        """Vérifie la connexion avant d'ouvrir l'écran de sélection des niveaux (mode en ligne)."""
+        self._requires_login(self._show_multiplayer_actual)
+
+    def _show_multiplayer_actual(self):
         """Ouvre l'écran de sélection des 10 niveaux du mode multijoueur."""
         self.clear_page()
         self.levels_page = LevelsMenuPage(
@@ -349,6 +386,10 @@ class AppController:
     # 🔑 REJOINDRE UN QUIZ (ÉLÈVE)
     # =====================================
     def show_join_room(self):
+        """Vérifie la connexion avant d'afficher le formulaire pour rejoindre un salon."""
+        self._requires_login(self._show_join_room_actual)
+
+    def _show_join_room_actual(self):
         """Affiche la page complète pour entrer le nom, prénom et le code PIN"""
         self.clear_page()
         self.join_page = JoinRoomPage(
@@ -512,10 +553,31 @@ class AppController:
                 )
 
     def show_settings(self):
-        print("Accès aux Paramètres")
+        self._requires_login(self._show_settings_actual)
 
-    def show_stats(self):
-        print("Accès aux Statistiques")
+    def _show_settings_actual(self):
+        self.clear_page()
+        self.settings_page = SettingsPage(
+            self.root,
+            back_callback=self.show_home,
+            account_callback=self.show_account,
+        )
+        self.settings_page.pack(fill="both", expand=True)
+
+    def show_account(self):
+        self._requires_login(self._show_account_actual)
+
+    def _show_account_actual(self):
+        self.clear_page()
+        self.account_page = AccountPage(
+            self.root,
+            back_callback=self.show_home,
+            on_logout=self._apres_deconnexion,
+        )
+        self.account_page.pack(fill="both", expand=True)
+
+    def _apres_deconnexion(self):
+        self.show_home()
 
     # =====================================
     # 📁 MES QUIZ & BIBLIOTHÈQUE HUB
@@ -933,11 +995,6 @@ class AppController:
 
             # Sur la DERNIÈRE question : on attend UNIQUEMENT le vrai signal
             # "tout le monde a répondu" (voir on_quiz_ended_host).
-            # Pas de filet de sécurité automatique ici : le chrono du prof
-            # n'a pas le délai de lecture vocale des élèves, donc un minuteur
-            # basé sur SON chrono à lui finirait toujours par couper les élèves
-            # en plein milieu de leur question. Le bouton "Terminer le quiz"
-            # reste disponible si un élève est bloqué/déconnecté.
             est_derniere = self.current_quiz and self.host_current_question_index >= len(self.current_quiz) - 1
             if est_derniere:
                 self.next_q_btn.configure(state="disabled", text="⏳ En attente des élèves...")
@@ -991,6 +1048,10 @@ class AppController:
     # Générateur TMY (IA)
     # =====================================
     def show_tmy_generator(self):
+        """Vérifie la connexion avant de lancer le générateur de quiz par IA."""
+        self._requires_login(self._show_tmy_generator_actual)
+
+    def _show_tmy_generator_actual(self):
         self.clear_page()
 
         self.tmy_generator = TMYGeneratorPage(
@@ -1049,6 +1110,7 @@ class AppController:
             self.root,
             self.current_quiz,
             self.show_result
+            
         )
 
         self.play.pack(fill="both", expand=True)

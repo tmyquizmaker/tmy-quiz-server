@@ -20,16 +20,48 @@ def enregistrer_score(quiz_id):
     if not Quiz.query.get(quiz_id):
         return jsonify({"error": "Quiz introuvable"}), 404
 
+    user = User.query.get(get_jwt_identity())
+    if not user:
+        return jsonify({"error": "Utilisateur introuvable"}), 404
+
     partie = GameHistory(
-        user_id=get_jwt_identity(),
+        user_id=user.id,
         quiz_id=quiz_id,
         score=score,
         duree_secondes=duree,
     )
     db.session.add(partie)
+
+    # --- XP : chaque quiz joué rapporte de l'XP égal au score obtenu.
+    # Changez cette ligne si vous voulez une autre formule (ex: score * 10).
+    user.xp += score
+
     db.session.commit()
 
-    return jsonify({"message": "Score enregistré"}), 201
+    return jsonify({
+        "message": "Score enregistré",
+        "xp_gagne": score,
+        "user": user.to_public_dict(),
+    }), 201
+
+
+@scores_bp.route("/me/stats", methods=["GET"])
+@jwt_required()
+def mes_stats():
+    """Statistiques personnelles de l'utilisateur connecté (pour la page Paramètres)."""
+    user_id = get_jwt_identity()
+
+    total_parties = GameHistory.query.filter_by(user_id=user_id).count()
+    meilleur_score = (
+        db.session.query(db.func.max(GameHistory.score))
+        .filter_by(user_id=user_id)
+        .scalar()
+    ) or 0
+
+    return jsonify({
+        "total_parties": total_parties,
+        "meilleur_score": meilleur_score,
+    }), 200
 
 
 @scores_bp.route("/leaderboard", methods=["GET"])

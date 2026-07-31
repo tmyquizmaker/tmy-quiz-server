@@ -1,8 +1,7 @@
 import os
 from datetime import timedelta
 
-# --- Vos configurations existantes ---
-API_KEY = os.environ.get("GEMINI_API_KEY", "")
+api_key = os.environ.get("GEMINI_API_KEY")
 
 MODELS = [
     "gemini-2.5-flash",
@@ -12,10 +11,6 @@ MODELS = [
 
 
 class Config:
-    # --- Vos variables globales intégrées à la classe ---
-    API_KEY = API_KEY
-    MODELS = MODELS
-
     # --- Base de données ---
     # Render fournit DATABASE_URL au format "postgres://".
     # SQLAlchemy exige le préfixe "postgresql://" depuis SQLAlchemy 1.4+.
@@ -24,16 +19,16 @@ class Config:
         if _raw_db_url.startswith("postgres://") else _raw_db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # --- Authentification & JWT ---
+    # --- JWT ---
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "change-moi-en-production")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=2)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
 
-    # --- Token de vérification d'email / reset password ---
+    # --- Token de vérification d'email / reset password (signature, pas JWT) ---
     SECURITY_PASSWORD_SALT = os.environ.get("SECURITY_PASSWORD_SALT", "change-moi-aussi")
-    EMAIL_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24  # 24h de validité pour le lien de vérification
+    EMAIL_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24  # 24h pour cliquer le lien de vérification
 
-    # --- Envoi d'email (Flask-Mail) ---
+    # --- Envoi d'email (Flask-Mail), compatible avec n'importe quel SMTP ---
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp-relay.brevo.com")
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
     MAIL_USE_TLS = True
@@ -41,5 +36,5 @@ class Config:
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "no-reply@votre-app.com")
 
-    # --- URL de base pour les liens d'activation ---
+    # URL de base de votre app pour construire les liens de vérification/reset
     APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:5000")

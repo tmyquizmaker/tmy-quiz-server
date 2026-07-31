@@ -11,9 +11,14 @@ import threading
 from flask import Flask, request
 from flask_migrate import Migrate
 from flask_socketio import SocketIO, emit, join_room
+from datetime import timedelta
 
 # 1. Importation de l'instance DB partagée depuis extensions.py
-from extensions import db
+from extensions import db, bcrypt, jwt, mail
+
+# Blueprints d'authentification et de scores
+from auth import auth_bp
+from scores import scores_bp
 
 # Importation depuis le sous-dossier ai/
 from ai.ai_generator import AIGenerator
@@ -31,12 +36,45 @@ if database_url.startswith("postgres://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# Évite les erreurs "SSL connection has been closed unexpectedly" avec les bases
+# hébergées (Render/Neon) qui coupent les connexions inactives : SQLAlchemy vérifie
+# la connexion avant chaque requête et en ouvre une nouvelle si besoin.
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 280,
+}
+
+# --- Config JWT ---
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "change-moi-en-production")
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
+app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
+
+# --- Config token de vérification email / reset password ---
+app.config["SECURITY_PASSWORD_SALT"] = os.environ.get("SECURITY_PASSWORD_SALT", "change-moi-aussi")
+app.config["EMAIL_TOKEN_MAX_AGE_SECONDS"] = 60 * 60 * 24
+
+# --- Config Flask-Mail ---
+app.config["MAIL_SERVER"] = os.environ.get("MAIL_SERVER", "smtp-relay.brevo.com")
+app.config["MAIL_PORT"] = int(os.environ.get("MAIL_PORT", 587))
+app.config["MAIL_USE_TLS"] = True
+app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = os.environ.get("MAIL_DEFAULT_SENDER", "no-reply@votre-app.com")
+app.config["APP_BASE_URL"] = os.environ.get("APP_BASE_URL", "http://localhost:5000")
+
 # 2. Initialisation de db avec app, puis de Migrate
 db.init_app(app)
+bcrypt.init_app(app)
+jwt.init_app(app)
+mail.init_app(app)
 migrate = Migrate(app, db)
 
 # Chargement des modèles pour la détection par Alembic / Flask-Migrate
 import models
+
+# 3. Enregistrement des routes d'authentification et de scores
+app.register_blueprint(auth_bp, url_prefix="/auth")
+app.register_blueprint(scores_bp)
 
 # ========================================================
 # 🔌 INITIALISATION SOCKETIO & MOTEUR IA
