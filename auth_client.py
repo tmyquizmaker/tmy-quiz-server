@@ -66,9 +66,10 @@ class AuthSession:
             r = requests.post(f"{API_BASE_URL}/auth/register", json={
                 "nom": nom, "prenom": prenom, "username": username,
                 "date_naissance": date_naissance, "email": email, "password": password,
-            }, timeout=10)
+            }, timeout=45)
             data = r.json()
-        except requests.RequestException:
+        except requests.RequestException as exc:
+            print(f"\n❌ ERREUR EXACTE REQUÊTE : {exc}\n")
             return False, "Impossible de contacter le serveur. Vérifiez votre connexion."
         except json.JSONDecodeError:
             return False, f"Réponse invalide du serveur ({r.status_code})."
@@ -82,9 +83,10 @@ class AuthSession:
         try:
             r = requests.post(f"{API_BASE_URL}/auth/login", json={
                 "identifiant": identifiant, "password": password,
-            }, timeout=10)
+            }, timeout=45)
             data = r.json()
-        except requests.RequestException:
+        except requests.RequestException as exc:
+            print(f"\n❌ ERREUR EXACTE LOGIN : {exc}\n")
             return False, "Impossible de contacter le serveur. Vérifiez votre connexion."
         except json.JSONDecodeError:
             return False, f"Réponse invalide du serveur ({r.status_code})."
