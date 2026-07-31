@@ -4,6 +4,14 @@ TMY Quiz Maker - Serveur WebSocket Central
 ===========================================
 """
 
+# ⚠️ IMPORTANT : ce patch doit être fait EN TOUT PREMIER, avant tout autre
+# import (y compris `os`, `requests`, `flask`, etc.). S'il est fait trop tard,
+# ou si gunicorn le fait après qu'un module ait déjà importé `ssl`/`socket`,
+# on obtient une erreur "maximum recursion depth exceeded" sur les appels
+# HTTPS (comme l'envoi d'email via l'API Brevo).
+from gevent import monkey
+monkey.patch_all()
+
 import os
 import random
 import threading
