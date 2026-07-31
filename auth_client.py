@@ -67,12 +67,17 @@ class AuthSession:
                 "nom": nom, "prenom": prenom, "username": username,
                 "date_naissance": date_naissance, "email": email, "password": password,
             }, timeout=45)
-            data = r.json()
+
+            try:
+                data = r.json()
+            except json.JSONDecodeError:
+                print(f"\n❌ ERREUR SERVEUR ({r.status_code}) : Le serveur a renvoyé du texte/HTML au lieu de JSON.")
+                print("CONTENU DU SERVEUR :", r.text[:500])
+                return False, f"Erreur serveur ({r.status_code}). Vérifiez le terminal."
+
         except requests.RequestException as exc:
             print(f"\n❌ ERREUR EXACTE REQUÊTE : {exc}\n")
             return False, "Impossible de contacter le serveur. Vérifiez votre connexion."
-        except json.JSONDecodeError:
-            return False, f"Réponse invalide du serveur ({r.status_code})."
 
         if r.status_code == 201:
             return True, data.get("message", "Compte créé.")
@@ -84,12 +89,17 @@ class AuthSession:
             r = requests.post(f"{API_BASE_URL}/auth/login", json={
                 "identifiant": identifiant, "password": password,
             }, timeout=45)
-            data = r.json()
+
+            try:
+                data = r.json()
+            except json.JSONDecodeError:
+                print(f"\n❌ ERREUR SERVEUR ({r.status_code}) : Le serveur a renvoyé du texte/HTML au lieu de JSON.")
+                print("CONTENU DU SERVEUR :", r.text[:500])
+                return False, f"Erreur serveur ({r.status_code}). Vérifiez le terminal."
+
         except requests.RequestException as exc:
             print(f"\n❌ ERREUR EXACTE LOGIN : {exc}\n")
             return False, "Impossible de contacter le serveur. Vérifiez votre connexion."
-        except json.JSONDecodeError:
-            return False, f"Réponse invalide du serveur ({r.status_code})."
 
         if r.status_code != 200:
             return False, data.get("error", "Identifiant ou mot de passe incorrect.")
