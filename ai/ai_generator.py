@@ -17,23 +17,13 @@ Fonctions :
 """
 
 
+import os
+import json
+import time
+import platform
 from google import genai
 
-# ✅ Nouvelle version corrigée :
-import os
-from config import MODELS
-
-# Récupère la clé directement depuis l'environnement Render / .env
-API_KEY = os.environ.get("GEMINI_API_KEY")
-
-import json
-
-import os
-
-import time
-
-import platform
-
+from config import API_KEY, MODELS
 from data.history_manager import HistoryManager
 
 
