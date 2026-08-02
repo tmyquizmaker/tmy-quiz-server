@@ -153,7 +153,7 @@ class HomePage(ctk.CTkFrame):
             row=0, col=0
         )
 
-        # --- CARTE 2 : MULTIJOUEUR (NOUVEAU !) ---
+        # --- CARTE 2 : MULTIJOUEUR ---
         self.card_multi = self.create_action_card(
             parent=self.grid_frame,
             icon="🌐",
@@ -164,11 +164,10 @@ class HomePage(ctk.CTkFrame):
             btn_color="#8A2BE2",
             hover_color="#6A1B9A",
             command=self.open_multiplayer,
-            row=0, col=1,
-            badge="NOUVEAU"
+            row=0, col=1
         )
 
-        # --- CARTE 3 : MODE CLASSE (Créer un quiz manuel OU rejoindre une salle) ---
+        # --- CARTE 3 : MODE CLASSE ---
         self.card_manual = self.create_action_card(
             parent=self.grid_frame,
             icon="🎓",
@@ -176,8 +175,8 @@ class HomePage(ctk.CTkFrame):
             title="MODE CLASSE",
             desc="Crée ton propre quiz avec tes questions, ou rejoins une salle déjà lancée avec un code PIN.",
             btn_text="COMMENCER",
-            btn_color="#2B2D42",
-            hover_color="#1A1B29",
+            btn_color="#0284C7",
+            hover_color="#0369A1",
             command=self.open_manual,
             row=1, col=0
         )
@@ -190,20 +189,19 @@ class HomePage(ctk.CTkFrame):
             title="MES QUIZ",
             desc="Consulte tes quiz créés, rejoue à tes préférés ou exporte-les pour tes proches.",
             btn_text="BIBLIOTHÈQUE",
-            btn_color="#2B2D42",
-            hover_color="#1A1B29",
+            btn_color="#0EA5E9",
+            hover_color="#0284C7",
             command=self.my_quizzes,
             row=1, col=1
         )
 
         # =========================================================
-        # 3. BARRE D'OUTILS (pied de page) — vide pour l'instant,
-        # gardée pour d'éventuels futurs raccourcis.
+        # 3. BARRE D'OUTILS (pied de page)
         # =========================================================
         self.footer_frame = ctk.CTkFrame(self.container, fg_color="transparent")
         self.footer_frame.pack(fill="x", pady=(15, 0))
 
-    def create_action_card(self, parent, icon, tag, title, desc, btn_text, btn_color, hover_color, command, row, col, badge=None):
+    def create_action_card(self, parent, icon, tag, title, desc, btn_text, btn_color, hover_color, command, row, col):
         """Créateur dynamique de carte UI moderne (v2 pro : liseré, badge icône, étiquette de catégorie)"""
         card = ctk.CTkFrame(parent, fg_color="#1E222D", corner_radius=16, border_width=1, border_color="#2B303C")
         card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
@@ -215,7 +213,7 @@ class HomePage(ctk.CTkFrame):
         content = ctk.CTkFrame(card, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=20, pady=(14, 15))
 
-        # Ligne du haut : badge icône circulaire + étiquette "NOUVEAU" éventuelle
+        # Ligne du haut : badge icône circulaire
         top_row = ctk.CTkFrame(content, fg_color="transparent")
         top_row.pack(fill="x")
 
@@ -223,12 +221,6 @@ class HomePage(ctk.CTkFrame):
         icon_badge.pack(side="left")
         icon_badge.pack_propagate(False)
         ctk.CTkLabel(icon_badge, text=icon, font=("Arial", 20)).pack(expand=True)
-
-        if badge:
-            ctk.CTkLabel(
-                top_row, text=badge, font=("Arial", 9, "bold"), text_color="#FFFFFF",
-                fg_color="#E53935", corner_radius=8
-            ).pack(side="right", ipadx=7, ipady=3)
 
         # Étiquette de catégorie
         ctk.CTkLabel(content, text=tag, font=("Arial", 9, "bold"), text_color=btn_color).pack(anchor="w", pady=(10, 0))
