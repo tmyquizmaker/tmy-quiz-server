@@ -24,7 +24,6 @@ class LoadingOverlay(ctk.CTkFrame):
             if os.path.exists(LOGO_PATH):
                 self._logo_original = Image.open(LOGO_PATH).convert("RGBA")
             else:
-                # Fallback de secours si le chemin relatif varie selon le dossier courant
                 alt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "logo.png")
                 self._logo_original = Image.open(alt_path).convert("RGBA")
         except Exception as e:
@@ -32,22 +31,24 @@ class LoadingOverlay(ctk.CTkFrame):
             self._logo_original = None
 
         # ===============================================
-        # CARTE CENTRALE DESIGN
+        # CARTE CENTRALE DESIGN (Largeur/Hauteur passées dans le constructeur)
         # ===============================================
         self.card = ctk.CTkFrame(
             self,
+            width=420,
+            height=260,
             fg_color="#1E222D",
             corner_radius=24,
             border_width=1,
             border_color="#2B303C"
         )
-        self.card.place(relx=0.5, rely=0.5, anchor="center", width=420, height=260)
+        self.card.place(relx=0.5, rely=0.5, anchor="center")
+        self.card.pack_propagate(False)  # Empêche la carte de redimensionner selon son contenu
 
         # 1. Logo animé (haut de la carte)
         self.logo_label = ctk.CTkLabel(self.card, text="")
         self.logo_label.place(relx=0.5, rely=0.25, anchor="center")
 
-        # Affichage initial d'une image fixe si chargée
         if self._logo_original:
             init_img = ctk.CTkImage(light_image=self._logo_original, dark_image=self._logo_original, size=(56, 56))
             self.logo_label.configure(image=init_img)
@@ -89,7 +90,6 @@ class LoadingOverlay(ctk.CTkFrame):
         self.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.lift()
         
-        # Lancer les animations du logo et de la barre
         if self._logo_original:
             self._animer_logo()
         
@@ -116,7 +116,7 @@ class LoadingOverlay(ctk.CTkFrame):
             image_tournee = self._logo_original.rotate(self._angle, expand=False)
             ctk_img = ctk.CTkImage(light_image=image_tournee, dark_image=image_tournee, size=(56, 56))
             self.logo_label.configure(image=ctk_img)
-            self.logo_label.image = ctk_img  # Empêche le garbage collector
+            self.logo_label.image = ctk_img
         except Exception:
             pass
         
