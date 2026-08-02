@@ -139,7 +139,7 @@ class HomePage(ctk.CTkFrame):
         self.grid_frame.grid_columnconfigure((0, 1), weight=1, uniform="group_home")
         self.grid_frame.grid_rowconfigure((0, 1), weight=1, uniform="group_home_row")
 
-        # --- CARTE 1 : GÉNÉRER AVEC TMY (IA) ---
+        # --- CARTE 1 : GÉNÉRER AVEC TMY (IA) - Couleur Bleue ---
         self.card_tmy = self.create_action_card(
             parent=self.grid_frame,
             icon="🧠",
@@ -153,7 +153,7 @@ class HomePage(ctk.CTkFrame):
             row=0, col=0
         )
 
-        # --- CARTE 2 : MULTIJOUEUR ---
+        # --- CARTE 2 : MULTIJOUEUR - Couleur Violette ---
         self.card_multi = self.create_action_card(
             parent=self.grid_frame,
             icon="🌐",
@@ -167,7 +167,7 @@ class HomePage(ctk.CTkFrame):
             row=0, col=1
         )
 
-        # --- CARTE 3 : MODE CLASSE ---
+        # --- CARTE 3 : MODE CLASSE - Même Couleur Violette que Défis entre amis ---
         self.card_manual = self.create_action_card(
             parent=self.grid_frame,
             icon="🎓",
@@ -175,13 +175,13 @@ class HomePage(ctk.CTkFrame):
             title="MODE CLASSE",
             desc="Crée ton propre quiz avec tes questions, ou rejoins une salle déjà lancée avec un code PIN.",
             btn_text="COMMENCER",
-            btn_color="#0284C7",
-            hover_color="#0369A1",
+            btn_color="#8A2BE2",
+            hover_color="#6A1B9A",
             command=self.open_manual,
             row=1, col=0
         )
 
-        # --- CARTE 4 : MES QUIZ & BIBLIOTHÈQUE ---
+        # --- CARTE 4 : MES QUIZ & BIBLIOTHÈQUE - Même Couleur Bleue que Lancer l'IA ---
         self.card_quizzes = self.create_action_card(
             parent=self.grid_frame,
             icon="📚",
@@ -189,8 +189,8 @@ class HomePage(ctk.CTkFrame):
             title="MES QUIZ",
             desc="Consulte tes quiz créés, rejoue à tes préférés ou exporte-les pour tes proches.",
             btn_text="BIBLIOTHÈQUE",
-            btn_color="#0EA5E9",
-            hover_color="#0284C7",
+            btn_color="#1F6AA5",
+            hover_color="#144870",
             command=self.my_quizzes,
             row=1, col=1
         )
