@@ -46,7 +46,7 @@ class HomePage(ctk.CTkFrame):
         self.container.pack(expand=True, fill="both", padx=40, pady=20)
 
         # =========================================================
-        # 1. BANNIÈRE / EN-TÊTE DASHBOARD
+        # 1. BANNIÈRE / EN-TÊTE D'ORIGINE (INTACT)
         # =========================================================
         self.header_card = ctk.CTkFrame(
             self.container, 
@@ -55,7 +55,7 @@ class HomePage(ctk.CTkFrame):
             border_width=1,
             border_color="#2B303C"
         )
-        self.header_card.pack(fill="x", pady=(0, 20), ipady=5)
+        self.header_card.pack(fill="x", pady=(0, 15), ipady=5)
 
         self.header_content = ctk.CTkFrame(self.header_card, fg_color="transparent")
         self.header_content.pack(fill="x", padx=20, pady=10)
@@ -91,7 +91,7 @@ class HomePage(ctk.CTkFrame):
         )
         self.subtitle.pack(anchor="w")
 
-        # Badge Joueur / XP cliquable (ouvre le compte, ou la connexion si non connecté)
+        # Badge Joueur / XP cliquable
         user = session.user or {}
         niveau = user.get("niveau", 1)
         xp = user.get("xp", 0)
@@ -117,7 +117,7 @@ class HomePage(ctk.CTkFrame):
             )
         self.player_badge.pack(side="right", padx=(6, 10))
 
-        # Icône Paramètres (⚙️), séparée du badge compte
+        # Icône Paramètres (⚙️)
         self.settings_icon_btn = ctk.CTkButton(
             self.header_content,
             text="⚙️",
@@ -131,113 +131,144 @@ class HomePage(ctk.CTkFrame):
         self.settings_icon_btn.pack(side="right", padx=(0, 4))
 
         # =========================================================
-        # 2. GRILLE DE SÉLECTION DE MODE DE JEU (2x2)
+        # 1.Bis MESSAGE DE BIENVENUE (comme sur l'image)
+        # =========================================================
+        self.welcome_frame = ctk.CTkFrame(self.container, fg_color="transparent")
+        self.welcome_frame.pack(fill="x", pady=(5, 10))
+
+        ctk.CTkLabel(
+            self.welcome_frame,
+            text="Bienvenue ! Que veux-tu faire aujourd'hui ?",
+            font=("Arial", 15, "bold"),
+            text_color="#FFFFFF"
+        ).pack(anchor="center")
+
+        ctk.CTkLabel(
+            self.welcome_frame,
+            text="Choisis ton mode de jeu et amuse-toi 🚀",
+            font=("Arial", 11),
+            text_color="#8888AA"
+        ).pack(anchor="center", pady=(2, 0))
+
+        # =========================================================
+        # 2. GRILLE DE SÉLECTION DE MODE DE JEU (2x2) AVEC STYLE DESIGN
         # =========================================================
         self.grid_frame = ctk.CTkFrame(self.container, fg_color="transparent")
-        self.grid_frame.pack(fill="both", expand=True, pady=10)
+        self.grid_frame.pack(fill="both", expand=True, pady=5)
 
         self.grid_frame.grid_columnconfigure((0, 1), weight=1, uniform="group_home")
         self.grid_frame.grid_rowconfigure((0, 1), weight=1, uniform="group_home_row")
 
-        # --- CARTE 1 : GÉNÉRER AVEC TMY (IA) - Couleur Bleue ---
-        self.card_tmy = self.create_action_card(
+        # --- CARTE 1 : GÉNÉRER AVEC TMY (IA) ---
+        self.card_tmy = self.create_advanced_card(
             parent=self.grid_frame,
-            icon="🧠",
+            icon_badge_char="🧠",
+            right_illustration="🧠",
             tag="INTELLIGENCE ARTIFICIELLE",
             title="GÉNÉRER AVEC TMY",
             desc="Laisse l'IA créer un quiz sur-mesure en quelques secondes sur n'importe quel sujet.",
-            btn_text="LANCER L'IA",
+            btn_text="🧠  LANCER L'IA",
+            border_color="#1F6AA5",
             btn_color="#1F6AA5",
             hover_color="#144870",
             command=self.open_tmy,
             row=0, col=0
         )
 
-        # --- CARTE 2 : MULTIJOUEUR - Couleur Violette ---
-        self.card_multi = self.create_action_card(
+        # --- CARTE 2 : MULTIJOUEUR ---
+        self.card_multi = self.create_advanced_card(
             parent=self.grid_frame,
-            icon="🌐",
+            icon_badge_char="🌐",
+            right_illustration="🏆",
             tag="MULTIJOUEUR SOCIAL",
             title="DÉFIS ENTRE AMIS",
             desc="Défie tes amis en direct ! 10 niveaux de jeu, classement en temps réel.",
-            btn_text="VOIR LES NIVEAUX",
+            btn_text="📊  VOIR LES NIVEAUX",
+            border_color="#8A2BE2",
             btn_color="#8A2BE2",
             hover_color="#6A1B9A",
             command=self.open_multiplayer,
             row=0, col=1
         )
 
-        # --- CARTE 3 : MODE CLASSE - Même Couleur Violette que Défis entre amis ---
-        self.card_manual = self.create_action_card(
+        # --- CARTE 3 : MODE CLASSE ---
+        self.card_manual = self.create_advanced_card(
             parent=self.grid_frame,
-            icon="🎓",
+            icon_badge_char="🎓",
+            right_illustration="🏫",
             tag="CRÉATION & SALLE EN DIRECT",
             title="MODE CLASSE",
             desc="Crée ton propre quiz avec tes questions, ou rejoins une salle déjà lancée avec un code PIN.",
-            btn_text="COMMENCER",
+            btn_text="👥  COMMENCER",
+            border_color="#8A2BE2",
             btn_color="#8A2BE2",
             hover_color="#6A1B9A",
             command=self.open_manual,
             row=1, col=0
         )
 
-        # --- CARTE 4 : MES QUIZ & BIBLIOTHÈQUE - Même Couleur Bleue que Lancer l'IA ---
-        self.card_quizzes = self.create_action_card(
+        # --- CARTE 4 : MES QUIZ & BIBLIOTHÈQUE ---
+        self.card_quizzes = self.create_advanced_card(
             parent=self.grid_frame,
-            icon="📚",
+            icon_badge_char="📚",
+            right_illustration="📚",
             tag="BIBLIOTHÈQUE",
             title="MES QUIZ",
             desc="Consulte tes quiz créés, rejoue à tes préférés ou exporte-les pour tes proches.",
-            btn_text="BIBLIOTHÈQUE",
+            btn_text="📖  BIBLIOTHÈQUE",
+            border_color="#1F6AA5",
             btn_color="#1F6AA5",
             hover_color="#144870",
             command=self.my_quizzes,
             row=1, col=1
         )
 
-        # =========================================================
-        # 3. BARRE D'OUTILS (pied de page)
-        # =========================================================
-        self.footer_frame = ctk.CTkFrame(self.container, fg_color="transparent")
-        self.footer_frame.pack(fill="x", pady=(15, 0))
-
-    def create_action_card(self, parent, icon, tag, title, desc, btn_text, btn_color, hover_color, command, row, col):
-        """Créateur dynamique de carte UI moderne (v2 pro : liseré, badge icône, étiquette de catégorie)"""
-        card = ctk.CTkFrame(parent, fg_color="#1E222D", corner_radius=16, border_width=1, border_color="#2B303C")
-        card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
-
-        # Liseré supérieur coloré = identité visuelle de la carte
-        accent = ctk.CTkFrame(card, fg_color=btn_color, height=3, corner_radius=0)
-        accent.pack(fill="x", side="top")
+    def create_advanced_card(self, parent, icon_badge_char, right_illustration, tag, title, desc, btn_text, border_color, btn_color, hover_color, command, row, col):
+        """Crée une carte de style haut de gamme avec bordure lumineuse et illustration latérale discrète"""
+        card = ctk.CTkFrame(
+            parent, 
+            fg_color="#131620", 
+            corner_radius=18, 
+            border_width=1.5, 
+            border_color=border_color
+        )
+        card.grid(row=row, column=col, padx=10, pady=8, sticky="nsew")
 
         content = ctk.CTkFrame(card, fg_color="transparent")
-        content.pack(fill="both", expand=True, padx=20, pady=(14, 15))
+        content.pack(fill="both", expand=True, padx=20, pady=16)
 
-        # Ligne du haut : badge icône circulaire
+        # Ligne supérieure : Badge icône à gauche et Illustration optionnelle à droite
         top_row = ctk.CTkFrame(content, fg_color="transparent")
-        top_row.pack(fill="x")
+        top_row.pack(fill="x", pady=(0, 6))
 
-        icon_badge = ctk.CTkFrame(top_row, fg_color=btn_color, corner_radius=14, width=48, height=48)
-        icon_badge.pack(side="left")
-        icon_badge.pack_propagate(False)
-        ctk.CTkLabel(icon_badge, text=icon, font=("Arial", 20)).pack(expand=True)
+        # Badge carré arrondi de l'icône principale
+        icon_box = ctk.CTkFrame(top_row, fg_color=border_color, corner_radius=12, width=46, height=46)
+        icon_box.pack(side="left")
+        icon_box.pack_propagate(False)
+        ctk.CTkLabel(icon_box, text=icon_badge_char, font=("Arial", 20)).pack(expand=True)
 
-        # Étiquette de catégorie
-        ctk.CTkLabel(content, text=tag, font=("Arial", 9, "bold"), text_color=btn_color).pack(anchor="w", pady=(10, 0))
+        # Illustration symbolique à droite (comme sur ton image de référence)
+        illu_box = ctk.CTkFrame(top_row, fg_color="#1C2130", corner_radius=12, width=65, height=46)
+        illu_box.pack(side="right")
+        illu_box.pack_propagate(False)
+        ctk.CTkLabel(illu_box, text=right_illustration, font=("Arial", 18)).pack(expand=True)
 
-        lbl_title = ctk.CTkLabel(content, text=title, font=("Arial", 16, "bold"), text_color="#FFFFFF")
-        lbl_title.pack(anchor="w", pady=(2, 5))
+        # Étiquette de catégorie (Tag)
+        ctk.CTkLabel(content, text=tag, font=("Arial", 9, "bold"), text_color=border_color).pack(anchor="w", pady=(4, 0))
 
-        lbl_desc = ctk.CTkLabel(content, text=desc, font=("Arial", 11), text_color="#AAAAAA", justify="left", wraplength=260)
-        lbl_desc.pack(anchor="w", pady=(0, 10))
+        # Titre de la carte
+        ctk.CTkLabel(content, text=title, font=("Arial", 16, "bold"), text_color="#FFFFFF").pack(anchor="w", pady=(2, 4))
 
-        # Bouton d'action bas de carte, avec un petit effet de "flash" au clic
+        # Description
+        ctk.CTkLabel(content, text=desc, font=("Arial", 11), text_color="#9999BB", justify="left", wraplength=270).pack(anchor="w", pady=(0, 12))
+
+        # Bouton d'action en bas de carte avec effet de clic fluide
         btn = ctk.CTkButton(
             content,
             text=btn_text,
             font=("Arial", 12, "bold"),
-            height=38,
-            corner_radius=10,
+            height=40,
+            corner_radius=12,
             fg_color=btn_color,
             hover_color=hover_color,
             command=lambda c=command, b_color=btn_color: self._effet_clic(btn_ref[0], b_color, c)
@@ -248,8 +279,7 @@ class HomePage(ctk.CTkFrame):
         return card
 
     def _effet_clic(self, bouton, couleur_originale, command):
-        """Petit flash blanc bref sur le bouton pour un retour visuel satisfaisant au clic,
-        avant d'exécuter réellement l'action."""
+        """Petit flash visuel au clic"""
         bouton.configure(fg_color="#FFFFFF")
         self.after(90, lambda: bouton.configure(fg_color=couleur_originale))
         if command:
