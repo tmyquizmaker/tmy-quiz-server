@@ -2,8 +2,10 @@
 Page de connexion / inscription — page complète intégrée à la navigation
 de l'app (comme HomePage, JoinRoomPage, etc.), et non une fenêtre popup.
 """
+import threading
 import customtkinter as ctk
 from auth_client import session
+from ui.loading_overlay import LoadingOverlay
 
 # Palette reprise du reste de l'app (voir show_level1_choice dans app_controller.py)
 BG_COLOR = "#121620"
@@ -50,12 +52,17 @@ class AuthPage(ctk.CTkFrame):
     on_success : callback appelé une fois connecté (reprend l'action d'origine,
                  ex : ouvrir le générateur IA, le multijoueur, etc.)
     back_callback : callback pour le bouton retour (généralement show_home)
+    forgot_password_callback : ouvre la page de réinitialisation par code
+    verify_email_callback(email) : ouvre la page de vérification par code après inscription
     """
 
-    def __init__(self, master, on_success=None, back_callback=None):
+    def __init__(self, master, on_success=None, back_callback=None,
+                 forgot_password_callback=None, verify_email_callback=None):
         super().__init__(master, fg_color=BG_COLOR)
         self.on_success = on_success
         self.back_callback = back_callback
+        self.forgot_password_callback = forgot_password_callback
+        self.verify_email_callback = verify_email_callback
 
         # --- En-tête ---
         header = ctk.CTkFrame(self, fg_color="transparent")
@@ -91,6 +98,9 @@ class AuthPage(ctk.CTkFrame):
         self._construire_onglet_connexion(self.tabview.tab("Connexion"))
         self._construire_onglet_inscription(self.tabview.tab("Créer un compte"))
 
+        # Superposition de chargement (logo qui tourne) pendant les appels réseau
+        self.overlay = LoadingOverlay(self, message="Connexion en cours...")
+
     # ---------- Onglet Connexion ----------
 
     def _construire_onglet_connexion(self, tab):
@@ -105,10 +115,18 @@ class AuthPage(ctk.CTkFrame):
         self.login_erreur = ctk.CTkLabel(tab, text="", text_color=ERROR_COLOR, wraplength=320)
         self.login_erreur.pack(pady=8)
 
-        ctk.CTkButton(
+        # Lien "Vérifier mon email" — affiché seulement si la connexion échoue
+        # parce que le compte n'est pas encore vérifié.
+        self.verifier_lien = ctk.CTkButton(
+            tab, text="Vérifier mon email maintenant", fg_color="transparent",
+            text_color="#5dade2", hover=False, command=self._ouvrir_verification,
+        )
+
+        self.login_btn = ctk.CTkButton(
             tab, text="SE CONNECTER", font=("Arial", 13, "bold"), width=300, height=42,
             fg_color=ACCENT_PURPLE, hover_color=ACCENT_PURPLE_HOVER, command=self._soumettre_connexion,
-        ).pack(pady=6)
+        )
+        self.login_btn.pack(pady=6)
 
         ctk.CTkButton(
             tab, text="Mot de passe oublié ?", fg_color="transparent",
@@ -123,9 +141,28 @@ class AuthPage(ctk.CTkFrame):
             self.login_erreur.configure(text="Merci de remplir tous les champs.")
             return
 
-        succes, message = session.connecter(identifiant, password)
+        self.verifier_lien.pack_forget()
+        self.login_btn.configure(state="disabled")
+        self.login_erreur.configure(text="")
+        self.overlay.afficher("Connexion en cours...")
+
+        def tache():
+            succes, message = session.connecter(identifiant, password)
+            self.after(0, lambda: self._apres_connexion_tentative(succes, message, identifiant))
+
+        threading.Thread(target=tache, daemon=True).start()
+
+    def _apres_connexion_tentative(self, succes, message, identifiant):
+        if not self.winfo_exists():
+            return
+        self.overlay.masquer()
+        self.login_btn.configure(state="normal")
+
         if not succes:
             self.login_erreur.configure(text=message)
+            if "vérifier votre email" in message.lower():
+                self._email_a_verifier = identifiant
+                self.verifier_lien.pack(pady=(0, 6))
             return
 
         if self.on_success:
@@ -133,11 +170,18 @@ class AuthPage(ctk.CTkFrame):
         elif self.back_callback:
             self.back_callback()
 
+    def _ouvrir_verification(self):
+        if self.verify_email_callback:
+            self.verify_email_callback(getattr(self, "_email_a_verifier", ""))
+
     def _mot_de_passe_oublie(self):
-        self.login_erreur.configure(
-            text="Un email de réinitialisation vous sera envoyé si le compte existe.",
-            text_color="#5dade2",
-        )
+        if self.forgot_password_callback:
+            self.forgot_password_callback()
+        else:
+            self.login_erreur.configure(
+                text="Un email de réinitialisation vous sera envoyé si le compte existe.",
+                text_color="#5dade2",
+            )
 
     # ---------- Onglet Inscription ----------
 
@@ -171,10 +215,11 @@ class AuthPage(ctk.CTkFrame):
         self.reg_erreur = ctk.CTkLabel(tab, text="", text_color=ERROR_COLOR, wraplength=320)
         self.reg_erreur.pack(pady=6)
 
-        ctk.CTkButton(
+        self.reg_btn = ctk.CTkButton(
             tab, text="CRÉER MON COMPTE", font=("Arial", 13, "bold"), width=300, height=42,
             fg_color=ACCENT_TEAL, hover_color=ACCENT_TEAL_HOVER, command=self._soumettre_inscription,
-        ).pack(pady=(0, 10))
+        )
+        self.reg_btn.pack(pady=(0, 10))
 
     def _soumettre_inscription(self):
         valeurs = {cle: entree.get().strip() for cle, entree in self.reg_champs.items()}
@@ -193,16 +238,34 @@ class AuthPage(ctk.CTkFrame):
             self.reg_erreur.configure(text="Les deux mots de passe ne correspondent pas.", text_color=ERROR_COLOR)
             return
 
-        succes, message = session.inscrire(
-            nom=valeurs["nom"], prenom=valeurs["prenom"], username=valeurs["username"],
-            date_naissance=valeurs["date_naissance"], email=valeurs["email"], password=password,
-        )
+        self.reg_btn.configure(state="disabled")
+        self.reg_erreur.configure(text="")
+        self.overlay.afficher("Création du compte...")
+
+        def tache():
+            succes, message = session.inscrire(
+                nom=valeurs["nom"], prenom=valeurs["prenom"], username=valeurs["username"],
+                date_naissance=valeurs["date_naissance"], email=valeurs["email"], password=password,
+            )
+            self.after(0, lambda: self._apres_inscription_tentative(succes, message, valeurs["email"]))
+
+        threading.Thread(target=tache, daemon=True).start()
+
+    def _apres_inscription_tentative(self, succes, message, email):
+        if not self.winfo_exists():
+            return
+        self.overlay.masquer()
+        self.reg_btn.configure(state="normal")
 
         if not succes:
             self.reg_erreur.configure(text=message, text_color=ERROR_COLOR)
             return
 
-        self.reg_erreur.configure(
-            text="Compte créé ! Vérifiez votre boîte mail avant de vous connecter.",
-            text_color=SUCCESS_COLOR,
-        )
+        # Compte créé : direction la page de saisie du code de vérification.
+        if self.verify_email_callback:
+            self.verify_email_callback(email)
+        else:
+            self.reg_erreur.configure(
+                text="Compte créé ! Vérifiez votre boîte mail pour le code d'activation.",
+                text_color=SUCCESS_COLOR,
+            )

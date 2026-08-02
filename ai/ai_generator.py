@@ -17,13 +17,18 @@ Fonctions :
 """
 
 
-import os
-import json
-import time
-import platform
 from google import genai
 
 from config import API_KEY, MODELS
+
+import json
+
+import os
+
+import time
+
+import platform
+
 from data.history_manager import HistoryManager
 
 

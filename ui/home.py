@@ -168,14 +168,14 @@ class HomePage(ctk.CTkFrame):
             badge="NOUVEAU"
         )
 
-        # --- CARTE 3 : CRÉATION MANUELLE ---
+        # --- CARTE 3 : MODE CLASSE (Créer un quiz manuel OU rejoindre une salle) ---
         self.card_manual = self.create_action_card(
             parent=self.grid_frame,
-            icon="✍️",
-            tag="ÉDITION MANUELLE",
-            title="CRÉER MANUELLEMENT",
-            desc="Rédige tes propres questions, réponses, explications et minuteurs personnalisés.",
-            btn_text="CRÉER UN QUIZ",
+            icon="🎓",
+            tag="CRÉATION & SALLE EN DIRECT",
+            title="MODE CLASSE",
+            desc="Crée ton propre quiz avec tes questions, ou rejoins une salle déjà lancée avec un code PIN.",
+            btn_text="COMMENCER",
             btn_color="#2B2D42",
             hover_color="#1A1B29",
             command=self.open_manual,
@@ -197,22 +197,11 @@ class HomePage(ctk.CTkFrame):
         )
 
         # =========================================================
-        # 3. BARRE D'OUTILS ET ACCÈS RAPIDE (PIED DE PAGE)
+        # 3. BARRE D'OUTILS (pied de page) — vide pour l'instant,
+        # gardée pour d'éventuels futurs raccourcis.
         # =========================================================
         self.footer_frame = ctk.CTkFrame(self.container, fg_color="transparent")
         self.footer_frame.pack(fill="x", pady=(15, 0))
-
-        # Bouton Rejoindre rapidement avec un CODE
-        self.join_code_btn = ctk.CTkButton(
-            self.footer_frame,
-            text="🔑 REJOINDRE AVEC UN CODE SALON",
-            font=("Arial", 12, "bold"),
-            height=40,
-            fg_color="#008080",
-            hover_color="#004D4D",
-            command=self.join_with_code
-        )
-        self.join_code_btn.pack(side="left", padx=5)
 
     def create_action_card(self, parent, icon, tag, title, desc, btn_text, btn_color, hover_color, command, row, col, badge=None):
         """Créateur dynamique de carte UI moderne (v2 pro : liseré, badge icône, étiquette de catégorie)"""
@@ -250,7 +239,7 @@ class HomePage(ctk.CTkFrame):
         lbl_desc = ctk.CTkLabel(content, text=desc, font=("Arial", 11), text_color="#AAAAAA", justify="left", wraplength=260)
         lbl_desc.pack(anchor="w", pady=(0, 10))
 
-        # Bouton d'action bas de carte
+        # Bouton d'action bas de carte, avec un petit effet de "flash" au clic
         btn = ctk.CTkButton(
             content,
             text=btn_text,
@@ -259,11 +248,20 @@ class HomePage(ctk.CTkFrame):
             corner_radius=10,
             fg_color=btn_color,
             hover_color=hover_color,
-            command=command
+            command=lambda c=command, b_color=btn_color: self._effet_clic(btn_ref[0], b_color, c)
         )
+        btn_ref = [btn]
         btn.pack(fill="x", side="bottom")
 
         return card
+
+    def _effet_clic(self, bouton, couleur_originale, command):
+        """Petit flash blanc bref sur le bouton pour un retour visuel satisfaisant au clic,
+        avant d'exécuter réellement l'action."""
+        bouton.configure(fg_color="#FFFFFF")
+        self.after(90, lambda: bouton.configure(fg_color=couleur_originale))
+        if command:
+            command()
 
     # =====================================
     # Callbacks & Actions

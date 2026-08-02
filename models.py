@@ -23,6 +23,11 @@ class User(db.Model):
     # n'est pas persistant entre les redéploiements, alors que la base l'est.
     avatar_base64 = db.Column(db.Text, nullable=True)
 
+    # --- Connexion unique : identifiant de la session active la plus récente.
+    # Chaque login en génère un nouveau et écrase l'ancien, ce qui invalide
+    # automatiquement le token de tout appareil précédemment connecté.
+    current_session_id = db.Column(db.String(64), nullable=True)
+
     scores = db.relationship("GameHistory", backref="user", lazy=True)
 
     def to_public_dict(self):
@@ -86,3 +91,20 @@ class GameHistory(db.Model):
     score = db.Column(db.Integer, nullable=False)
     duree_secondes = db.Column(db.Integer)
     joue_le = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class VerificationCode(db.Model):
+    """Code à 6 chiffres envoyé par email, pour la vérification d'inscription
+    OU la réinitialisation de mot de passe — le champ 'purpose' distingue les deux
+    ('verify_email' ou 'reset_password'). Valable 15 minutes par défaut."""
+    __tablename__ = "verification_codes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    code_hash = db.Column(db.String(255), nullable=False)
+    purpose = db.Column(db.String(30), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False, nullable=False)
+
+    user = db.relationship("User")

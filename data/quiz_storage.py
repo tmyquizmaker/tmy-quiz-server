@@ -10,18 +10,31 @@ quiz_storage.py - Sauvegarde, Chargement et Suppression des Quiz locaux
 import json
 import os
 from datetime import datetime
+from auth_client import session
 
-# Chemin absolu vers quizzes.json dans le dossier data/
+# Dossier où sont rangés les fichiers de bibliothèque
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-QUIZ_FILE = os.path.join(BASE_DIR, "quizzes.json")
+
+
+def _get_quiz_file():
+    """Chaque compte connecté a son propre fichier de bibliothèque — jamais celui
+    d'un autre utilisateur, même sur le même appareil. Calculé à chaque appel
+    (pas une constante) car l'utilisateur peut se connecter/déconnecter en cours d'app."""
+    if session.est_connecte() and session.user.get("username"):
+        nom_fichier = f"quizzes_{session.user['username']}.json"
+    else:
+        nom_fichier = "quizzes.json"  # secours si personne n'est connecté
+    return os.path.join(BASE_DIR, nom_fichier)
 
 
 def load_quizzes():
-    """Charge tous les quiz enregistrés dans data/quizzes.json en filtrant et nettoyant les données invalides"""
-    if not os.path.exists(QUIZ_FILE):
+    """Charge tous les quiz enregistrés dans le fichier de bibliothèque de
+    l'utilisateur connecté, en filtrant et nettoyant les données invalides."""
+    quiz_file = _get_quiz_file()
+    if not os.path.exists(quiz_file):
         return []
     try:
-        with open(QUIZ_FILE, "r", encoding="utf-8") as f:
+        with open(quiz_file, "r", encoding="utf-8") as f:
             data = json.load(f)
             
             # S'assurer qu'on a bien une liste
@@ -106,7 +119,7 @@ def save_quiz(title, questions, teacher_name="Professeur", **kwargs):
         quizzes.append(saved_entry)
 
     try:
-        with open(QUIZ_FILE, "w", encoding="utf-8") as f:
+        with open(_get_quiz_file(), "w", encoding="utf-8") as f:
             json.dump(quizzes, f, ensure_ascii=False, indent=4)
         print(f"✅ Quiz '{clean_title}' sauvegardé avec succès par {teacher_name}.")
     except Exception as e:
@@ -127,7 +140,7 @@ def delete_quiz(quiz_id):
         return False
 
     try:
-        with open(QUIZ_FILE, "w", encoding="utf-8") as f:
+        with open(_get_quiz_file(), "w", encoding="utf-8") as f:
             json.dump(updated_quizzes, f, ensure_ascii=False, indent=4)
         print(f"🗑️ Quiz ID {quiz_id} supprimé avec succès.")
         return True
@@ -138,11 +151,12 @@ def delete_quiz(quiz_id):
 
 def clean_empty_quizzes():
     """Supprime définitivement tous les quiz vides ou 'Quiz sans titre' du fichier JSON"""
-    if not os.path.exists(QUIZ_FILE):
+    quiz_file = _get_quiz_file()
+    if not os.path.exists(quiz_file):
         return True
         
     try:
-        with open(QUIZ_FILE, "r", encoding="utf-8") as f:
+        with open(quiz_file, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         if not isinstance(data, list):
@@ -153,7 +167,7 @@ def clean_empty_quizzes():
             if isinstance(q, dict) and len(q.get("questions", [])) > 0 and q.get("title", "").strip() not in ["", "Quiz sans titre"]
         ]
 
-        with open(QUIZ_FILE, "w", encoding="utf-8") as f:
+        with open(quiz_file, "w", encoding="utf-8") as f:
             json.dump(filtered, f, ensure_ascii=False, indent=4)
         print("🧹 Nettoyage des quiz vides effectué avec succès.")
         return True

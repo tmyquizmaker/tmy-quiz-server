@@ -131,9 +131,24 @@ class AuthSession:
         except Exception:
             return False
 
+    def _gerer_session_revoquee(self, r):
+        """Si le serveur signale que ce compte a été connecté sur un autre
+        appareil, déconnecte proprement localement pour que l'app redemande
+        une connexion au lieu de continuer avec un token mort."""
+        if r.status_code == 401:
+            try:
+                if "autre appareil" in r.json().get("error", ""):
+                    self.deconnecter()
+                    return True
+            except Exception:
+                pass
+        return False
+
     def _charger_profil(self):
         try:
             r = requests.get(f"{API_BASE_URL}/auth/me", headers=self._headers_auth(), timeout=10)
+            if self._gerer_session_revoquee(r):
+                return False
             if r.status_code != 200:
                 return False
             self.user = r.json()
@@ -147,6 +162,8 @@ class AuthSession:
             return False, "Non connecté."
         try:
             r = requests.get(f"{API_BASE_URL}/me/stats", headers=self._headers_auth(), timeout=10)
+            if self._gerer_session_revoquee(r):
+                return False, "Vous avez été déconnecté (connexion depuis un autre appareil)."
             if r.status_code != 200:
                 return False, "Impossible de récupérer les statistiques."
             return True, r.json()
@@ -202,6 +219,8 @@ class AuthSession:
             return False, f"Réponse invalide du serveur ({r.status_code})."
 
         if r.status_code != 200:
+            if r.status_code == 401 and "autre appareil" in data.get("error", ""):
+                self.deconnecter()
             return False, data.get("error", "Erreur lors de l'envoi de la photo.")
 
         self.user = data.get("user", self.user)
@@ -229,6 +248,8 @@ class AuthSession:
             return False, f"Réponse invalide du serveur ({r.status_code})."
 
         if r.status_code != 201:
+            if r.status_code == 401 and "autre appareil" in data.get("error", ""):
+                self.deconnecter()
             return False, data.get("error", "Erreur lors de l'enregistrement du score.")
 
         if "user" in data:
@@ -240,6 +261,65 @@ class AuthSession:
         self.refresh_token = None
         self.user = None
         self._effacer_session_locale()
+
+    # ---------- Vérification d'email (par code) ----------
+
+    def verifier_email(self, email, code):
+        try:
+            r = requests.post(f"{API_BASE_URL}/auth/verify-email-with-code", json={
+                "email": email, "code": code,
+            }, timeout=20)
+            data = r.json()
+        except requests.RequestException:
+            return False, "Impossible de contacter le serveur."
+        except json.JSONDecodeError:
+            return False, f"Réponse invalide du serveur ({r.status_code})."
+
+        if r.status_code != 200:
+            return False, data.get("error", "Code invalide ou expiré.")
+        return True, data.get("message", "Email vérifié.")
+
+    def renvoyer_code_verification(self, email):
+        try:
+            r = requests.post(f"{API_BASE_URL}/auth/resend-verification", json={"email": email}, timeout=20)
+            data = r.json()
+        except requests.RequestException:
+            return False, "Impossible de contacter le serveur."
+        except json.JSONDecodeError:
+            return False, f"Réponse invalide du serveur ({r.status_code})."
+
+        if r.status_code != 200:
+            return False, data.get("error", "Impossible de renvoyer le code.")
+        return True, data.get("message", "Nouveau code envoyé.")
+
+    # ---------- Mot de passe oublié (par code) ----------
+
+    def demander_code_reinitialisation(self, email):
+        """Déclenche l'envoi du code par email. Réponse volontairement générique
+        côté serveur (ne révèle pas si le compte existe)."""
+        try:
+            r = requests.post(f"{API_BASE_URL}/auth/forgot-password", json={"email": email}, timeout=20)
+            data = r.json()
+        except requests.RequestException:
+            return False, "Impossible de contacter le serveur."
+        except json.JSONDecodeError:
+            return False, f"Réponse invalide du serveur ({r.status_code})."
+        return True, data.get("message", "Code envoyé si le compte existe.")
+
+    def reinitialiser_mot_de_passe(self, email, code, nouveau_mdp):
+        try:
+            r = requests.post(f"{API_BASE_URL}/auth/reset-password-with-code", json={
+                "email": email, "code": code, "password": nouveau_mdp,
+            }, timeout=20)
+            data = r.json()
+        except requests.RequestException:
+            return False, "Impossible de contacter le serveur."
+        except json.JSONDecodeError:
+            return False, f"Réponse invalide du serveur ({r.status_code})."
+
+        if r.status_code != 200:
+            return False, data.get("error", "Code invalide ou expiré.")
+        return True, data.get("message", "Mot de passe mis à jour.")
 
 
 # Instance unique partagée par toute l'application

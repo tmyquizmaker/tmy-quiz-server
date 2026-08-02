@@ -10,16 +10,22 @@ history_manager.py - Gestionnaire d'historique TMY
 import json
 import os
 from datetime import datetime
+from auth_client import session
 
 # Chemin absolu vers le fichier JSON dans le même dossier
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
+HISTORY_FILE = os.path.join(BASE_DIR, "history.json")  # secours si personne n'est connecté
 
 
 class HistoryManager:
 
     def __init__(self):
-        self.file = HISTORY_FILE
+        # Chaque compte connecté a son propre fichier d'historique — jamais celui
+        # d'un autre utilisateur, même sur le même appareil.
+        if session.est_connecte() and session.user.get("username"):
+            self.file = os.path.join(BASE_DIR, f"history_{session.user['username']}.json")
+        else:
+            self.file = HISTORY_FILE
         self.ensure_storage()
 
     # =====================================

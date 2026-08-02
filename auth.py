@@ -1,85 +1,172 @@
+import random
 import re
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta
 import requests
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-from flask_mail import Message
-from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+from flask_jwt_extended import (
+    create_access_token, create_refresh_token, jwt_required,
+    get_jwt_identity, get_jwt,
+)
 from sqlalchemy import or_
 
-from extensions import db, bcrypt, mail
-from models import User
+from extensions import db, bcrypt, jwt
+from models import User, VerificationCode
 
 auth_bp = Blueprint("auth", __name__)
 
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
-def _get_serializer():
-    return URLSafeTimedSerializer(current_app.config["JWT_SECRET_KEY"])
+# ==========================================================
+# Connexion unique : un compte ne peut être connecté que sur UN SEUL
+# appareil à la fois. Chaque login génère un nouvel identifiant de
+# session ("sid") stocké dans le JWT ET en base sur l'utilisateur. Si
+# les deux ne correspondent plus (parce qu'un login plus récent a eu
+# lieu ailleurs), le token est considéré révoqué automatiquement.
+# ==========================================================
+
+@jwt.token_in_blocklist_loader
+def _verifier_session_unique(jwt_header, jwt_payload):
+    token_sid = jwt_payload.get("sid")
+    identity = jwt_payload.get("sub")
+    if not token_sid or not identity:
+        return True  # token mal formé : traité comme révoqué par sécurité
+
+    user = User.query.get(int(identity))
+    if not user:
+        return True
+
+    return token_sid != user.current_session_id
 
 
-def _send_verification_email(user):
-    """Envoie l'e-mail de vérification via l'API HTTP de Brevo (Port 443 - Garanti sans blocage)."""
-    token = _get_serializer().dumps(user.email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
-    lien = f"{current_app.config['APP_BASE_URL']}/auth/verify-email/{token}"
+@jwt.revoked_token_loader
+def _token_revoque(jwt_header, jwt_payload):
+    return jsonify({
+        "error": "Votre session a expiré : ce compte a été connecté sur un autre appareil."
+    }), 401
 
+
+# ==========================================================
+# Envoi d'email via l'API HTTP de Brevo (port 443 - fiable,
+# fonctionne même quand le SMTP classique est bloqué)
+# ==========================================================
+
+def _envoyer_via_brevo(destinataire_email, destinataire_nom, sujet, html_content):
     url = "https://api.brevo.com/v3/smtp/email"
-    
+
     headers = {
         "accept": "application/json",
         "api-key": current_app.config.get("MAIL_PASSWORD"),
-        "content-type": "application/json"
+        "content-type": "application/json",
     }
-    
+
     payload = {
         "sender": {"email": current_app.config.get("MAIL_DEFAULT_SENDER"), "name": "TMY Quiz Maker"},
-        "to": [{"email": user.email, "name": f"{user.prenom} {user.nom}"}],
-        "subject": "Confirmez votre inscription à TMY Quiz Maker",
-        "htmlContent": f"""
-            <!DOCTYPE html>
-            <html lang="fr">
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    body {{ font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }}
-                    .container {{ max-width: 600px; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }}
-                    h2 {{ color: #2c3e50; }}
-                    p {{ color: #555555; line-height: 1.5; }}
-                    .btn {{ display: inline-block; background-color: #0d9488; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; margin: 20px 0; }}
-                    .footer {{ font-size: 12px; color: #999999; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 15px; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2>Bienvenue sur TMY Quiz Maker, {user.prenom} !</h2>
-                    <p>Merci de vous être inscrit. Pour sécuriser votre compte et accéder à toutes les fonctionnalités, veuillez valider votre adresse e-mail en cliquant sur le bouton ci-dessous :</p>
-                    
-                    <a href="{lien}" class="btn" target="_blank">Valider mon adresse e-mail</a>
-                    
-                    <p>Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br><a href="{lien}">{lien}</a></p>
-                    
-                    <div class="footer">
-                        <p>Ce lien est valable 24 heures. Si vous n'avez pas demandé la création de ce compte, veuillez ignorer cet e-mail.</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-        """
+        "to": [{"email": destinataire_email, "name": destinataire_nom}],
+        "subject": sujet,
+        "htmlContent": html_content,
     }
 
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.status_code in [200, 201, 202]:
-            current_app.logger.info("📧 E-mail de vérification envoyé avec succès via l'API HTTP Brevo à %s", user.email)
+            current_app.logger.info("📧 Email envoyé avec succès via l'API HTTP Brevo à %s", destinataire_email)
             return True
-        else:
-            current_app.logger.error("❌ ÉCHEC API BREVO : %s", response.text)
-            return False
+        current_app.logger.error("❌ ÉCHEC API BREVO : %s", response.text)
+        return False
     except Exception as exc:
-        current_app.logger.error("❌ ERREUR REQUÊTE API BREVO pour %s : %s", user.email, exc)
+        current_app.logger.error("❌ ERREUR REQUÊTE API BREVO pour %s : %s", destinataire_email, exc)
         return False
 
+
+def _email_template(titre_interieur, contenu_html):
+    """Gabarit d'email professionnel réutilisé partout : en-tête sombre avec logo,
+    corps clair, pied de page. Le logo vient de EMAIL_LOGO_URL (config/variable
+    d'environnement) — doit être une URL publique (ex: image hébergée sur GitHub),
+    un email ne peut pas charger un fichier local sur votre disque."""
+    logo_url = current_app.config.get("EMAIL_LOGO_URL", "")
+    logo_html = (
+        f'<img src="{logo_url}" alt="TMY Quiz Maker" style="height:48px;">'
+        if logo_url else
+        '<span style="font-size:22px;font-weight:bold;color:#2dd4bf;">TMY QUIZ MAKER</span>'
+    )
+
+    return f"""
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }}
+            .container {{ max-width: 520px; margin: auto; background: #ffffff; border-radius: 10px;
+                          overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.06); }}
+            .header {{ background-color: #0f172a; padding: 24px; text-align: center; }}
+            .body {{ padding: 32px 30px; }}
+            h2 {{ color: #0f172a; margin-top: 0; }}
+            p {{ color: #4b5563; line-height: 1.6; font-size: 14px; }}
+            .code-box {{ font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center;
+                background: #f1f5f9; color: #0d9488; padding: 18px; border-radius: 8px; margin: 24px 0; }}
+            .footer {{ font-size: 12px; color: #9ca3af; padding: 20px 30px; border-top: 1px solid #eeeeee; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">{logo_html}</div>
+            <div class="body">
+                <h2>{titre_interieur}</h2>
+                {contenu_html}
+            </div>
+            <div class="footer">
+                <p>TMY Quiz Maker — Smart Learning &amp; Party Experience</p>
+                <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail en toute sécurité.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+
+# ==========================================================
+# Codes à 6 chiffres (vérification email + réinitialisation mdp)
+# ==========================================================
+
+def _generer_code():
+    return f"{random.randint(0, 999999):06d}"
+
+
+def _creer_code(user, purpose, minutes_validite=15):
+    code = _generer_code()
+    code_hash = bcrypt.generate_password_hash(code).decode("utf-8")
+    entree = VerificationCode(
+        user_id=user.id,
+        code_hash=code_hash,
+        purpose=purpose,
+        expires_at=datetime.utcnow() + timedelta(minutes=minutes_validite),
+    )
+    db.session.add(entree)
+    db.session.commit()
+    return code
+
+
+def _verifier_code(user, purpose, code):
+    entree = (
+        VerificationCode.query.filter_by(user_id=user.id, purpose=purpose, used=False)
+        .order_by(VerificationCode.created_at.desc())
+        .first()
+    )
+    if not entree or entree.expires_at < datetime.utcnow():
+        return False
+    if not bcrypt.check_password_hash(entree.code_hash, code):
+        return False
+    entree.used = True
+    db.session.commit()
+    return True
+
+
+# ==========================================================
+# Inscription & vérification d'email (par code)
+# ==========================================================
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
@@ -123,19 +210,52 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    mail_envoye = _send_verification_email(user)
+    code = _creer_code(user, "verify_email")
+    html = _email_template(
+        f"Bienvenue, {user.prenom} !",
+        f"""
+        <p>Merci de vous être inscrit sur TMY Quiz Maker. Voici votre code de vérification, valable 15 minutes :</p>
+        <div class="code-box">{code}</div>
+        <p>Entrez ce code dans l'application pour activer votre compte.</p>
+        """,
+    )
+    mail_envoye = _envoyer_via_brevo(user.email, f"{user.prenom} {user.nom}", "Votre code de vérification - TMY Quiz Maker", html)
 
     if not mail_envoye:
         return jsonify({
-            "message": "Compte créé, mais l'e-mail de vérification n'a pas pu être envoyé. "
-                       "Vérifiez vos logs Render ou demandez un renvoi d'e-mail.",
+            "message": "Compte créé, mais l'e-mail n'a pas pu être envoyé. Redemandez un code depuis l'application.",
             "user": user.to_public_dict(),
         }), 201
 
     return jsonify({
-        "message": "Compte créé avec succès. Vérifiez votre boîte mail pour valider votre adresse.",
+        "message": "Compte créé. Entrez le code reçu par email pour l'activer.",
         "user": user.to_public_dict(),
     }), 201
+
+
+@auth_bp.route("/verify-email-with-code", methods=["POST"])
+def verify_email_with_code():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    code = (data.get("code") or "").strip()
+
+    if not email or not code:
+        return jsonify({"error": "Email et code requis"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "Code invalide ou expiré"}), 400
+
+    if user.email_verified:
+        return jsonify({"message": "Votre email est déjà vérifié. Vous pouvez vous connecter."}), 200
+
+    if not _verifier_code(user, "verify_email", code):
+        return jsonify({"error": "Code invalide ou expiré"}), 400
+
+    user.email_verified = True
+    db.session.commit()
+
+    return jsonify({"message": "Email vérifié avec succès. Vous pouvez vous connecter."}), 200
 
 
 @auth_bp.route("/resend-verification", methods=["POST"])
@@ -153,58 +273,19 @@ def resend_verification():
     if user.email_verified:
         return jsonify({"message": "Votre e-mail est déjà vérifié. Vous pouvez vous connecter."}), 200
 
-    mail_envoye = _send_verification_email(user)
-    if mail_envoye:
-        return jsonify({"message": "Un nouvel e-mail de confirmation a été envoyé."}), 200
-    else:
-        return jsonify({"error": "Impossible d'envoyer l'e-mail pour le moment. Réessayez plus tard."}), 500
+    code = _creer_code(user, "verify_email")
+    html = _email_template(
+        "Nouveau code de vérification",
+        f"""<p>Voici votre nouveau code, valable 15 minutes :</p><div class="code-box">{code}</div>""",
+    )
+    if _envoyer_via_brevo(user.email, f"{user.prenom} {user.nom}", "Votre code de vérification - TMY Quiz Maker", html):
+        return jsonify({"message": "Un nouveau code a été envoyé."}), 200
+    return jsonify({"error": "Impossible d'envoyer l'e-mail pour le moment. Réessayez plus tard."}), 500
 
 
-def _html_page(titre, message, succes=True):
-    couleur = "#1a7f37" if succes else "#c0392b"
-    return f"""
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-        <meta charset="utf-8">
-        <title>{titre}</title>
-        <style>
-            body {{ font-family: sans-serif; text-align: center; padding: 60px 20px; }}
-            h1 {{ color: {couleur}; }}
-        </style>
-    </head>
-    <body>
-        <h1>{titre}</h1>
-        <p>{message}</p>
-        <p>Vous pouvez fermer cette page et retourner dans l'application.</p>
-    </body>
-    </html>
-    """
-
-
-@auth_bp.route("/verify-email/<token>", methods=["GET"])
-def verify_email(token):
-    try:
-        email = _get_serializer().loads(
-            token,
-            salt=current_app.config["SECURITY_PASSWORD_SALT"],
-            max_age=current_app.config["EMAIL_TOKEN_MAX_AGE_SECONDS"],
-        )
-    except SignatureExpired:
-        return _html_page("Lien expiré", "Ce lien de vérification a expiré. Redemandez-en un depuis l'application.", succes=False), 400
-    except BadSignature:
-        return _html_page("Lien invalide", "Ce lien de vérification n'est pas valide.", succes=False), 400
-
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        return _html_page("Utilisateur introuvable", "Aucun compte ne correspond à ce lien.", succes=False), 404
-
-    if not user.email_verified:
-        user.email_verified = True
-        db.session.commit()
-
-    return _html_page("Email vérifié", "Votre adresse email a bien été confirmée. Vous pouvez vous connecter dans l'application."), 200
-
+# ==========================================================
+# Connexion & session
+# ==========================================================
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
@@ -225,8 +306,15 @@ def login():
     if not user.email_verified:
         return jsonify({"error": "Merci de vérifier votre email avant de vous connecter"}), 403
 
-    access_token = create_access_token(identity=str(user.id))
-    refresh_token = create_refresh_token(identity=str(user.id))
+    # Nouvelle session : écrase l'ancienne, ce qui invalide automatiquement
+    # le token de tout appareil précédemment connecté sur ce compte.
+    nouveau_sid = uuid.uuid4().hex
+    user.current_session_id = nouveau_sid
+    db.session.commit()
+
+    claims = {"sid": nouveau_sid}
+    access_token = create_access_token(identity=str(user.id), additional_claims=claims)
+    refresh_token = create_refresh_token(identity=str(user.id), additional_claims=claims)
 
     return jsonify({
         "access_token": access_token,
@@ -239,9 +327,16 @@ def login():
 @jwt_required(refresh=True)
 def refresh():
     identity = get_jwt_identity()
-    new_access_token = create_access_token(identity=identity)
+    # Le nouvel access_token garde le même sid que le refresh_token utilisé,
+    # pour rester cohérent avec la session enregistrée sur le compte.
+    sid = get_jwt().get("sid")
+    new_access_token = create_access_token(identity=identity, additional_claims={"sid": sid})
     return jsonify({"access_token": new_access_token}), 200
 
+
+# ==========================================================
+# Mot de passe oublié (par code)
+# ==========================================================
 
 @auth_bp.route("/forgot-password", methods=["POST"])
 def forgot_password():
@@ -251,89 +346,57 @@ def forgot_password():
     if not email:
         return jsonify({"error": "Email requis"}), 400
 
-    user = User.query.filter_by(email=email).first()
     reponse_generique = {
-        "message": "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé."
+        "message": "Si un compte existe avec cet email, un code de réinitialisation a été envoyé."
     }
+
+    user = User.query.filter_by(email=email).first()
     if not user:
         return jsonify(reponse_generique), 200
 
-    token = _get_serializer().dumps(user.email, salt=current_app.config["SECURITY_PASSWORD_SALT"] + "-reset")
-    lien = f"{current_app.config['APP_BASE_URL']}/auth/reset-password/{token}"
-
-    try:
-        msg = Message(
-            subject="Réinitialisation de votre mot de passe",
-            recipients=[user.email],
-            body=(
-                f"Bonjour {user.prenom},\n\n"
-                f"Cliquez sur ce lien pour choisir un nouveau mot de passe (valable 1h) :\n{lien}\n\n"
-                "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message."
-            ),
-        )
-        mail.send(msg)
-    except Exception as exc:  # noqa: BLE001
-        current_app.logger.error("Échec d'envoi de l'email de réinitialisation: %s", exc)
+    code = _creer_code(user, "reset_password")
+    html = _email_template(
+        "Réinitialisation de votre mot de passe",
+        f"""
+        <p>Voici votre code de vérification, valable 15 minutes :</p>
+        <div class="code-box">{code}</div>
+        <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>
+        """,
+    )
+    _envoyer_via_brevo(user.email, f"{user.prenom} {user.nom}", "Votre code de réinitialisation - TMY Quiz Maker", html)
 
     return jsonify(reponse_generique), 200
 
 
-@auth_bp.route("/reset-password/<token>", methods=["GET"])
-def reset_password_form(token):
-    return f"""
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head><meta charset="utf-8"><title>Nouveau mot de passe</title></head>
-    <body style="font-family: sans-serif; max-width: 400px; margin: 60px auto;">
-        <h1>Choisissez un nouveau mot de passe</h1>
-        <input id="pwd" type="password" placeholder="Nouveau mot de passe (8 caractères min.)" style="width:100%; padding:8px;">
-        <button onclick="soumettre()" style="margin-top:10px; padding:8px 16px;">Valider</button>
-        <p id="resultat"></p>
-        <script>
-            async function soumettre() {{
-                const pwd = document.getElementById('pwd').value;
-                const res = await fetch(window.location.pathname, {{
-                    method: 'POST',
-                    headers: {{'Content-Type': 'application/json'}},
-                    body: JSON.stringify({{password: pwd}})
-                }});
-                const data = await res.json();
-                document.getElementById('resultat').textContent = data.message || data.error;
-            }}
-        </script>
-    </body>
-    </html>
-    """
-
-
-@auth_bp.route("/reset-password/<token>", methods=["POST"])
-def reset_password_submit(token):
+@auth_bp.route("/reset-password-with-code", methods=["POST"])
+def reset_password_with_code():
     data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    code = (data.get("code") or "").strip()
     nouveau_mdp = data.get("password") or ""
+
+    if not email or not code or not nouveau_mdp:
+        return jsonify({"error": "Email, code et nouveau mot de passe requis"}), 400
 
     if len(nouveau_mdp) < 8:
         return jsonify({"error": "Le mot de passe doit contenir au moins 8 caractères"}), 400
 
-    try:
-        email = _get_serializer().loads(
-            token,
-            salt=current_app.config["SECURITY_PASSWORD_SALT"] + "-reset",
-            max_age=3600,
-        )
-    except SignatureExpired:
-        return jsonify({"error": "Ce lien a expiré, refaites une demande"}), 400
-    except BadSignature:
-        return jsonify({"error": "Lien invalide"}), 400
-
     user = User.query.filter_by(email=email).first()
     if not user:
-        return jsonify({"error": "Utilisateur introuvable"}), 404
+        return jsonify({"error": "Code invalide ou expiré"}), 400
+
+    if not _verifier_code(user, "reset_password", code):
+        return jsonify({"error": "Code invalide ou expiré"}), 400
 
     user.password_hash = bcrypt.generate_password_hash(nouveau_mdp).decode("utf-8")
     db.session.commit()
 
     return jsonify({"message": "Mot de passe mis à jour avec succès."}), 200
 
+
+# ==========================================================
+# Photo de profil & informations du compte
+# ==========================================================
 
 @auth_bp.route("/avatar", methods=["POST"])
 @jwt_required()

@@ -37,6 +37,9 @@ from ui.result import ResultPage
 from ui.tmy_generator import TMYGeneratorPage
 
 from ui.auth_page import AuthPage
+from ui.forgot_password_page import ForgotPasswordPage
+from ui.manual_quiz_choice_page import ManualQuizChoicePage
+from ui.verify_email_page import VerifyEmailPage
 from ui.settings_page import SettingsPage
 from ui.account_page import AccountPage
 from auth_client import session
@@ -117,7 +120,7 @@ class AppController:
         self.home = HomePage(
             master=self.root,
             tmy_callback=self.show_tmy_generator,
-            manual_callback=self.show_create_manual,
+            manual_callback=self.show_manual_choice,
             quizzes_callback=self.show_my_quizzes,
             multiplayer_callback=self.show_multiplayer,
             join_callback=self.show_join_room,
@@ -139,8 +142,34 @@ class AppController:
             self.root,
             on_success=lambda: self._apres_connexion(on_success),
             back_callback=self.show_home,
+            forgot_password_callback=self.show_forgot_password,
+            verify_email_callback=self.show_verify_email,
         )
         self.auth_page.pack(fill="both", expand=True)
+
+    def show_forgot_password(self):
+        """Page dédiée (pas un popup) pour réinitialiser le mot de passe par code
+        envoyé par email. Retourne à la page de connexion une fois terminé."""
+        self.clear_page()
+        self.forgot_password_page = ForgotPasswordPage(
+            self.root,
+            back_callback=self.show_auth_page,
+            on_success=self.show_auth_page,
+        )
+        self.forgot_password_page.pack(fill="both", expand=True)
+
+    def show_verify_email(self, email):
+        """Page de saisie du code de vérification reçu par email (après
+        inscription, ou depuis l'écran de connexion si le compte n'est pas
+        encore vérifié). Retourne à la connexion une fois vérifié."""
+        self.clear_page()
+        self.verify_email_page = VerifyEmailPage(
+            self.root,
+            email=email,
+            back_callback=self.show_auth_page,
+            on_success=self.show_auth_page,
+        )
+        self.verify_email_page.pack(fill="both", expand=True)
 
     def _apres_connexion(self, on_success):
         if on_success:
@@ -583,6 +612,10 @@ class AppController:
     # 📁 MES QUIZ & BIBLIOTHÈQUE HUB
     # =====================================
     def show_my_quizzes(self):
+        """Vérifie la connexion avant d'afficher la bibliothèque (privée au compte)."""
+        self._requires_login(self._show_my_quizzes_actual)
+
+    def _show_my_quizzes_actual(self):
         """Affiche proprement la page du Hub Bibliothèque intégrée dans l'application."""
         self.clear_page()
         self.library_hub = LibraryHubWindow(master=self.root, app_controller=self)
@@ -1023,6 +1056,17 @@ class AppController:
     # =====================================
     # 📝 Création manuelle
     # =====================================
+    def show_manual_choice(self):
+        """Affiche le choix Créer / Rejoindre pour le Mode Classe."""
+        self.clear_page()
+        self.manual_choice_page = ManualQuizChoicePage(
+            self.root,
+            create_callback=self.show_create_manual,
+            join_callback=self.show_join_room,
+            back_callback=self.show_home,
+        )
+        self.manual_choice_page.pack(fill="both", expand=True)
+
     def show_create_manual(self):
         self.clear_page()
 

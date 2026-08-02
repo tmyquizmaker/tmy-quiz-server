@@ -56,6 +56,10 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "change-moi-en-production")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
+# Nécessaire pour que le callback de connexion unique (token_in_blocklist_loader
+# dans auth.py) soit bien appelé sur chaque requête authentifiée.
+app.config["JWT_BLOCKLIST_ENABLED"] = True
+app.config["JWT_BLOCKLIST_TOKEN_CHECKS"] = ["access", "refresh"]
 
 # --- Config token de vérification email / reset password ---
 app.config["SECURITY_PASSWORD_SALT"] = os.environ.get("SECURITY_PASSWORD_SALT", "change-moi-aussi")
@@ -68,6 +72,9 @@ app.config["MAIL_USE_TLS"] = True
 app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
 app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
 app.config["MAIL_DEFAULT_SENDER"] = os.environ.get("MAIL_DEFAULT_SENDER", "no-reply@votre-app.com")
+# URL PUBLIQUE de votre logo pour l'en-tête des emails (ex: lien "raw" GitHub vers assets/logo.png).
+# Un email ne peut pas charger un fichier local sur votre disque, il faut une URL accessible sur internet.
+app.config["EMAIL_LOGO_URL"] = os.environ.get("EMAIL_LOGO_URL", "")
 app.config["APP_BASE_URL"] = os.environ.get("APP_BASE_URL", "http://localhost:5000")
 
 # 2. Initialisation de db avec app, puis de Migrate
