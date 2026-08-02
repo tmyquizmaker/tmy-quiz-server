@@ -694,18 +694,20 @@ class PlayQuizPage(ctk.CTkFrame):
     def _confirmer_annulation(self, dialog):
         dialog.destroy()
 
-        # Coupe immédiatement tout ce qui pourrait continuer en arrière-plan
-        # (chronomètre, séquence vocale) — les méthodes de lecture vérifient déjà
-        # self.answered / self.quiz_finished et s'arrêtent d'elles-mêmes.
-        stop()
+        # Coupe la voix de manière sécurisée pour éviter tout blocage silencieux
+        try:
+            stop()
+        except Exception as e:
+            print(f"⚠️ Erreur vocale ignorée lors de l'annulation : {e}")
+
+        # Stoppe la logique du jeu en cours
         self.answered = True
         self.timer_running = False
         self.quiz_finished = True
 
-        # Volontairement : on n'appelle PAS finish_quiz() ici, donc ni l'historique
-        # (data/history.json) ni le score/XP ne sont enregistrés pour ce quiz annulé.
+        # Retourne à l'accueil via un micro-délai (sécurité anti-crash Tkinter)
         if self.cancel_callback:
-            self.cancel_callback()
+            self.after(50, self.cancel_callback)
 
     def update_timer_display(self):
         if self.current_time == 0:
