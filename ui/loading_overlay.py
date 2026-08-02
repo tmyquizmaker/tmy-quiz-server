@@ -1,6 +1,6 @@
 """
 Superposition plein écran Ultra-Pro avec logo tournant (assets/logo.png),
-carte moderne et barre de progression animée.
+carte moderne et barre de progression animée et fluide.
 """
 import os
 import customtkinter as ctk
@@ -14,10 +14,9 @@ class LoadingOverlay(ctk.CTkFrame):
     def __init__(self, parent, message="Veuillez patienter..."):
         super().__init__(parent, fg_color="#0B0E14")
         self._angle = 0
-        self._apres_id = None
         self._logo_original = None
         self._progress_val = 0.0
-        self._animating_bar = False
+        self._animating = False
 
         # Chargement obligatoire du logo depuis assets/logo.png
         try:
@@ -31,7 +30,7 @@ class LoadingOverlay(ctk.CTkFrame):
             self._logo_original = None
 
         # ===============================================
-        # CARTE CENTRALE DESIGN (Largeur/Hauteur passées dans le constructeur)
+        # CARTE CENTRALE DESIGN
         # ===============================================
         self.card = ctk.CTkFrame(
             self,
@@ -43,7 +42,7 @@ class LoadingOverlay(ctk.CTkFrame):
             border_color="#2B303C"
         )
         self.card.place(relx=0.5, rely=0.5, anchor="center")
-        self.card.pack_propagate(False)  # Empêche la carte de redimensionner selon son contenu
+        self.card.pack_propagate(False)
 
         # 1. Logo animé (haut de la carte)
         self.logo_label = ctk.CTkLabel(self.card, text="")
@@ -87,48 +86,55 @@ class LoadingOverlay(ctk.CTkFrame):
     def afficher(self, message=None):
         if message:
             self.message_label.configure(text=message)
+        
+        # Afficher l'overlay en premier plan
         self.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.lift()
+        
+        # Activer les animations et lancer les boucles
+        self._animating = True
+        self._progress_val = 0.0
         
         if self._logo_original:
             self._animer_logo()
         
-        self._animating_bar = True
-        self._progress_val = 0.0
         self._animer_barre()
 
     def masquer(self):
-        self._animating_bar = False
-        if self._apres_id:
-            try:
-                self.after_cancel(self._apres_id)
-            except Exception:
-                pass
-            self._apres_id = None
+        self._animating = False
         self.progress_bar.set(0.0)
         self.place_forget()
 
     def _animer_logo(self):
-        if not self.winfo_ismapped() or not self._logo_original:
+        if not self._animating:
             return
+        
         self._angle = (self._angle - 6) % 360
         try:
-            image_tournee = self._logo_original.rotate(self._angle, expand=False)
-            ctk_img = ctk.CTkImage(light_image=image_tournee, dark_image=image_tournee, size=(56, 56))
-            self.logo_label.configure(image=ctk_img)
-            self.logo_label.image = ctk_img
+            if self._logo_original:
+                image_tournee = self._logo_original.rotate(self._angle, expand=False)
+                ctk_img = ctk.CTkImage(light_image=image_tournee, dark_image=image_tournee, size=(56, 56))
+                self.logo_label.configure(image=ctk_img)
+                self.logo_label.image = ctk_img
         except Exception:
             pass
         
+        # Relance la rotation toutes les 40 millisecondes
         self.after(40, self._animer_logo)
 
     def _animer_barre(self):
-        if not self._animating_bar or not self.winfo_ismapped():
+        if not self._animating:
             return
         
-        self._progress_val += 0.04
+        # Fait progresser la barre en boucle fluide
+        self._progress_val += 0.03
         if self._progress_val > 1.0:
             self._progress_val = 0.0
             
-        self.progress_bar.set(self._progress_val)
+        try:
+            self.progress_bar.set(self._progress_val)
+        except Exception:
+            pass
+            
+        # Relance la progression toutes les 50 millisecondes
         self.after(50, self._animer_barre)
