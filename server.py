@@ -98,8 +98,10 @@ with app.app_context():
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_base64 TEXT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_session_id VARCHAR(255);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_parties INTEGER DEFAULT 0 NOT NULL;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS meilleur_score INTEGER DEFAULT 0 NOT NULL;"))
         conn.commit()
-    print("✅ Base PostgreSQL à jour avec toutes les colonnes !")
+    print("✅ Base PostgreSQL à jour avec toutes les colonnes (statistiques incluses) !")
 # --------------------------------------------------------
 
 # 3. Enregistrement des routes d'authentification et de scores

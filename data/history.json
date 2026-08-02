@@ -1,5 +1,68 @@
 [
     {
+        "id": 9,
+        "mode": "Solo",
+        "sujet": "Quiz Solo",
+        "niveau": "Moyen",
+        "score": 2,
+        "total": 4,
+        "percentage": 50,
+        "xp": 1622,
+        "rank": "🥉 3ème",
+        "average_time": 10.8,
+        "questions": [
+            {
+                "question": "Quelle grandeur physique représente la distance parcourue par un objet en mouvement par unité de temps ?",
+                "options": [
+                    "A. La vitesse",
+                    "B. L'accélération",
+                    "C. La force",
+                    "D. Le travail"
+                ],
+                "user_answer": "A. La vitesse",
+                "correct_answer": "A. La vitesse",
+                "is_correct": true
+            },
+            {
+                "question": "Quelle est l'unité de mesure fondamentale du temps dans le Système International d'Unités (SI) ?",
+                "options": [
+                    "A. Le kilogramme",
+                    "B. La seconde",
+                    "C. Le mètre",
+                    "D. L'ampère"
+                ],
+                "user_answer": "C. Le mètre",
+                "correct_answer": "B. La seconde",
+                "is_correct": false
+            },
+            {
+                "question": "Dans un circuit électrique, que représente la tension électrique, souvent appelée 'voltage', aux bornes d'un composant ?",
+                "options": [
+                    "A. Le flux d'électrons",
+                    "B. La résistance au courant",
+                    "C. La différence de potentiel électrique",
+                    "D. L'énergie dissipée"
+                ],
+                "user_answer": "C. La différence de potentiel électrique",
+                "correct_answer": "C. La différence de potentiel électrique",
+                "is_correct": true
+            },
+            {
+                "question": "Quand la lumière frappe une surface très lisse et polie, comme celle d'un miroir, elle est renvoyée de manière ordonnée et prévisible. Comment nomme-t-on ce phénomène ?",
+                "options": [
+                    "A. La réflexion diffuse",
+                    "B. La réfraction",
+                    "C. La réflexion spéculaire",
+                    "D. La diffraction"
+                ],
+                "user_answer": "B. La réfraction",
+                "correct_answer": "C. La réflexion spéculaire",
+                "is_correct": false
+            }
+        ],
+        "date": "02/08/2026 11:22"
+    },
+    {
         "id": 8,
         "mode": "Solo",
         "sujet": "Quiz Solo",

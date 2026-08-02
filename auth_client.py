@@ -131,24 +131,9 @@ class AuthSession:
         except Exception:
             return False
 
-    def _gerer_session_revoquee(self, r):
-        """Si le serveur signale que ce compte a été connecté sur un autre
-        appareil, déconnecte proprement localement pour que l'app redemande
-        une connexion au lieu de continuer avec un token mort."""
-        if r.status_code == 401:
-            try:
-                if "autre appareil" in r.json().get("error", ""):
-                    self.deconnecter()
-                    return True
-            except Exception:
-                pass
-        return False
-
     def _charger_profil(self):
         try:
             r = requests.get(f"{API_BASE_URL}/auth/me", headers=self._headers_auth(), timeout=10)
-            if self._gerer_session_revoquee(r):
-                return False
             if r.status_code != 200:
                 return False
             self.user = r.json()
@@ -162,8 +147,6 @@ class AuthSession:
             return False, "Non connecté."
         try:
             r = requests.get(f"{API_BASE_URL}/me/stats", headers=self._headers_auth(), timeout=10)
-            if self._gerer_session_revoquee(r):
-                return False, "Vous avez été déconnecté (connexion depuis un autre appareil)."
             if r.status_code != 200:
                 return False, "Impossible de récupérer les statistiques."
             return True, r.json()
@@ -219,8 +202,6 @@ class AuthSession:
             return False, f"Réponse invalide du serveur ({r.status_code})."
 
         if r.status_code != 200:
-            if r.status_code == 401 and "autre appareil" in data.get("error", ""):
-                self.deconnecter()
             return False, data.get("error", "Erreur lors de l'envoi de la photo.")
 
         self.user = data.get("user", self.user)
@@ -248,13 +229,42 @@ class AuthSession:
             return False, f"Réponse invalide du serveur ({r.status_code})."
 
         if r.status_code != 201:
-            if r.status_code == 401 and "autre appareil" in data.get("error", ""):
-                self.deconnecter()
             return False, data.get("error", "Erreur lors de l'enregistrement du score.")
 
         if "user" in data:
             self.user = data["user"]
         return True, data.get("message", "Score enregistré.")
+
+    def crediter_xp(self, xp, score=None):
+        """Crédite de l'XP sur le compte (quiz solo IA ou partie entre amis —
+        aucun quiz_id nécessaire). Met à jour la session avec le profil renvoyé
+        (le badge NIVEAU/XP de l'accueil reflétera le nouveau total)."""
+        if not self.est_connecte():
+            return False, "Vous devez être connecté."
+
+        payload = {"xp": xp}
+        if score is not None:
+            payload["score"] = score
+
+        try:
+            r = requests.post(
+                f"{API_BASE_URL}/me/xp", json=payload,
+                headers=self._headers_auth(), timeout=15,
+            )
+            data = r.json()
+        except requests.RequestException:
+            return False, "Impossible de contacter le serveur."
+        except json.JSONDecodeError:
+            return False, f"Réponse invalide du serveur ({r.status_code})."
+
+        if r.status_code != 201:
+            if r.status_code == 401 and "autre appareil" in data.get("error", ""):
+                self.deconnecter()
+            return False, data.get("error", "Erreur lors du crédit d'XP.")
+
+        if "user" in data:
+            self.user = data["user"]
+        return True, data.get("message", "XP créditée.")
 
     def deconnecter(self):
         self.access_token = None

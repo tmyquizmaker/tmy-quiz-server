@@ -24,6 +24,11 @@ except ImportError:
     def parler(*args, **kwargs):
         pass
 
+try:
+    from auth_client import session
+except ImportError:
+    session = None
+
 
 POINTS_BASE = 100
 
@@ -231,6 +236,13 @@ class PartyGamePage(ctk.CTkFrame):
         """Reçoit 'quiz_ended' — affiche un résumé simple de fin de partie."""
         if self.timer_job:
             self.after_cancel(self.timer_job)
+
+        # Crédite l'XP gagnée sur le compte connecté (mode "Questions entre amis")
+        if session is not None and session.est_connecte():
+            try:
+                session.crediter_xp(self.score_total)
+            except Exception as e:
+                print(f"⚠️ Erreur lors du crédit d'XP (party) : {e}")
 
         message = None
         if isinstance(data, dict):

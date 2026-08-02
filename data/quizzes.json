@@ -38,88 +38,137 @@
         ],
         "created_at": "2026-07-28 21:35:10"
     },
+    {
+        "id": 3,
+        "title": "bionioewn",
+        "teacher_name": "jbkebde",
+        "total_questions": 1,
+        "questions": [
+            {
+                "question": "ehiuheu",
+                "A": "bcubb",
+                "B": "uihiuhr",
+                "C": "hiuie",
+                "D": "huuhued",
+                "correct": "A",
+                "time": "10s",
+                "points": "10"
+            }
+        ],
+        "created_at": "2026-08-02 11:07:41"
+    },
     [
         {
-            "question": "De quelles particules subatomiques un atome est-il principalement composé, portant des charges positives, négatives ou aucune charge ?",
-            "A": "Protons, Neutrons, Électrons",
-            "B": "Molécules, Ions, Isotopes",
-            "C": "Quarks, Leptons, Photons",
-            "D": "Noyaux, Orbitales, Gaz",
+            "question": "Quelle grandeur physique représente la distance parcourue par un objet en mouvement par unité de temps ?",
+            "A": "La vitesse",
+            "B": "L'accélération",
+            "C": "La force",
+            "D": "Le travail",
             "correct": "A",
             "difficulty": "easy",
             "time": 15
         },
         {
-            "question": "Quel type de changement n'altère pas la nature chimique d'une substance, comme la fusion de la glace ou l'ébullition de l'eau ?",
-            "A": "Changement physique",
-            "B": "Changement chimique",
-            "C": "Réaction nucléaire",
-            "D": "Synthèse organique",
-            "correct": "A",
-            "difficulty": "easy",
-            "time": 20
-        },
-        {
-            "question": "En chimie, comment définit-on une substance pure qui ne peut pas être décomposée en substances plus simples par des moyens chimiques habituels ?",
-            "A": "Un élément",
-            "B": "Un composé",
-            "C": "Un mélange",
-            "D": "Une molécule",
-            "correct": "A",
-            "difficulty": "easy",
-            "time": 20
-        },
-        {
-            "question": "Quel est le gaz le plus abondant dans l'atmosphère terrestre, constituant environ 78% de l'air que nous respirons ?",
-            "A": "L'azote",
-            "B": "L'oxygène",
-            "C": "Le dioxyde de carbone",
-            "D": "L'argon",
-            "correct": "A",
+            "question": "Quelle est l'unité de mesure fondamentale du temps dans le Système International d'Unités (SI) ?",
+            "A": "Le kilogramme",
+            "B": "La seconde",
+            "C": "Le mètre",
+            "D": "L'ampère",
+            "correct": "B",
             "difficulty": "easy",
             "time": 15
+        },
+        {
+            "question": "Dans un circuit électrique, que représente la tension électrique, souvent appelée 'voltage', aux bornes d'un composant ?",
+            "A": "Le flux d'électrons",
+            "B": "La résistance au courant",
+            "C": "La différence de potentiel électrique",
+            "D": "L'énergie dissipée",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quand la lumière frappe une surface très lisse et polie, comme celle d'un miroir, elle est renvoyée de manière ordonnée et prévisible. Comment nomme-t-on ce phénomène ?",
+            "A": "La réflexion diffuse",
+            "B": "La réfraction",
+            "C": "La réflexion spéculaire",
+            "D": "La diffraction",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 25
         }
     ],
     [
         {
-            "question": "Quel phénomène optique se produit quand la lumière change de direction en passant d'un milieu transparent à un autre ?",
-            "A": "Réfraction",
-            "B": "Réflexion",
-            "C": "Diffraction",
-            "D": "Dispersion",
-            "correct": "A",
+            "question": "Quel théorème stipule que le travail total effectué sur un objet est égal à la variation de son énergie cinétique ?",
+            "A": "Théorème de Gauss",
+            "B": "Théorème de l'énergie cinétique",
+            "C": "Principe de Pascal",
+            "D": "Loi de Faraday",
+            "correct": "B",
             "difficulty": "medium",
-            "time": 18
+            "time": 20
         },
         {
-            "question": "Quelle quantité physique mesure le taux auquel l'énergie est transférée ou convertie par unité de temps ?",
-            "A": "Énergie cinétique",
-            "B": "Travail",
-            "C": "Puissance",
-            "D": "Pression",
+            "question": "Comment nomme-t-on le phénomène où la fréquence perçue d'une onde change lorsque la source ou l'observateur est en mouvement ?",
+            "A": "Effet Compton",
+            "B": "Effet photoélectrique",
+            "C": "Effet Doppler-Fizeau",
+            "D": "Effet Zeeman",
             "correct": "C",
             "difficulty": "medium",
-            "time": 18
+            "time": 25
         },
         {
-            "question": "Comment nomme-t-on le principe selon lequel un corps immergé reçoit une poussée vers le haut égale au poids du fluide déplacé ?",
-            "A": "Loi de Pascal",
-            "B": "Principe d'Archimède",
-            "C": "Loi de Bernoulli",
-            "D": "Loi de Boyle-Mariotte",
+            "question": "Quelle propriété physique quantifie l'énergie thermique nécessaire pour élever la température d'une unité de masse d'une substance d'un degré ?",
+            "A": "Conductivité thermique",
+            "B": "Chaleur latente",
+            "C": "Capacité thermique massique",
+            "D": "Dilatation thermique",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 25
+        },
+        {
+            "question": "En électricité, quelle grandeur représente la capacité d'un composant à stocker une charge électrique pour une tension donnée ?",
+            "A": "Résistance",
+            "B": "Inductance",
+            "C": "Capacitance",
+            "D": "Conductance",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Parmi les ondes électromagnétiques suivantes, laquelle a une longueur d'onde typiquement plus courte que la lumière visible ?",
+            "A": "Ondes radio",
+            "B": "Micro-ondes",
+            "C": "Rayons gamma",
+            "D": "Infrarouges",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quel phénomène se produit quand un rayon lumineux frappant une interface entre deux milieux ne traverse pas, mais est entièrement réfléchi ?",
+            "A": "Diffusion de Rayleigh",
+            "B": "Réfraction totale interne",
+            "C": "Absorption sélective",
+            "D": "Polarisation",
             "correct": "B",
             "difficulty": "medium",
             "time": 25
         },
         {
-            "question": "Quelle est la relation fondamentale entre la fréquence (f) et la période (T) d'une onde vibratoire ?",
-            "A": "f = 1/T",
-            "B": "f = T",
-            "C": "f = T²",
-            "D": "f = 2T",
-            "correct": "A",
+            "question": "Quel principe fondamental décrit la relation entre la pression, le volume, la température et la quantité de matière d'un gaz idéal ?",
+            "A": "Loi de Boyle-Mariotte",
+            "B": "Principe d'Archimède",
+            "C": "Loi des gaz parfaits",
+            "D": "Loi de Graham",
+            "correct": "C",
             "difficulty": "medium",
-            "time": 15
+            "time": 25
         }
     ]
 ]

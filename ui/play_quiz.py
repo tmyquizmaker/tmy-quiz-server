@@ -9,8 +9,12 @@ play_quiz.py - Interface de jeu moderne & dynamique
 
 import customtkinter as ctk
 import winsound
+import uuid
+from datetime import datetime
 
 from voice import parler, parler_sequence, stop
+from auth_client import session
+from library_manager import LibraryManager
 import ui.colors as colors
 import ui.fonts as fonts
 
@@ -28,13 +32,15 @@ class PlayQuizPage(ctk.CTkFrame):
     def __init__(self, master, quiz, finish_callback, quiz_title="Quiz Solo", cancel_callback=None):
         super().__init__(master)
 
-        # Extraction prioritaire du sujet / titre du quiz
+        # Extraction prioritaire du sujet / titre / niveau du quiz
         if isinstance(quiz, dict):
             self.quiz_title = quiz.get("sujet") or quiz.get("title") or quiz.get("quiz_title") or quiz_title
+            self.quiz_niveau = quiz.get("niveau", "")
             self.quiz = quiz.get("questions", [])
         else:
             self.quiz = quiz
             self.quiz_title = quiz_title
+            self.quiz_niveau = ""
 
         self.finish_callback = finish_callback
         self.cancel_callback = cancel_callback
@@ -96,10 +102,14 @@ class PlayQuizPage(ctk.CTkFrame):
         self.header_frame = ctk.CTkFrame(self.container, fg_color="transparent")
         self.header_frame.pack(fill="x", pady=(0, 10))
 
-        # Affichage du VRAI SUJET du Quiz
+        # Affichage du VRAI SUJET du Quiz + niveau
+        titre_affiche = f"🧠 {self.quiz_title}"
+        if self.quiz_niveau:
+            titre_affiche += f"  •  {self.quiz_niveau}"
+
         self.title_lbl = ctk.CTkLabel(
             self.header_frame,
-            text=f"🧠 {self.quiz_title}",
+            text=titre_affiche,
             font=("Arial", 16, "bold"),
             text_color="#1F6AA5"
         )
@@ -118,17 +128,9 @@ class PlayQuizPage(ctk.CTkFrame):
         )
         self.cancel_button.pack(side="left", padx=(15, 0))
 
-        # Statut Rang / Combo / XP à droite
+        # Statut Combo / XP à droite (le classement/rang a été retiré : quiz solo, pas de sens)
         self.stats_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         self.stats_frame.pack(side="right")
-
-        self.rank_label = ctk.CTkLabel(
-            self.stats_frame,
-            text="🥇 1er",
-            font=("Arial", 13, "bold"),
-            text_color="#00E676"
-        )
-        self.rank_label.pack(side="left", padx=(0, 10))
 
         self.combo_label = ctk.CTkLabel(
             self.stats_frame,
@@ -312,7 +314,6 @@ class PlayQuizPage(ctk.CTkFrame):
         question = self.quiz[self.index]
 
         self.counter.configure(text=f"Question {self.index + 1} / {len(self.quiz)}")
-        self.rank_label.configure(text=self.calculate_live_rank())
         self.combo_label.configure(text=f"🔥 x{self.combo}")
         self.xp_label.configure(text=f"⚡ {self.total_xp} XP")
 
@@ -479,7 +480,6 @@ class PlayQuizPage(ctk.CTkFrame):
             self.wrong_sound()
             parler(f"Mauvaise réponse. La bonne réponse était {bonne}.")
 
-        self.rank_label.configure(text=self.calculate_live_rank())
         self.combo_label.configure(text=f"🔥 x{self.combo}")
         self.xp_label.configure(text=f"⚡ {self.total_xp} XP")
 
@@ -557,12 +557,12 @@ class PlayQuizPage(ctk.CTkFrame):
         # Construction des questions structurées
         detailed_questions = self.build_detailed_questions()
 
-        # Enregistrement propre dans history.json via HistoryManager
+        # Enregistrement propre dans history.json via HistoryManager (sert à l'anti-répétition IA)
         if history_mgr is not None:
             try:
                 hist_data = history_mgr.create_quiz_data(
                     sujet=self.quiz_title,
-                    niveau="Moyen",
+                    niveau=self.quiz_niveau or "Moyen",
                     score=self.score,
                     total=total_questions,
                     xp=self.total_xp,
@@ -575,11 +575,53 @@ class PlayQuizPage(ctk.CTkFrame):
             except Exception as e:
                 print(f"⚠️ Erreur lors de la sauvegarde dans l'historique : {e}")
 
+        # Enregistrement dans LibraryManager — c'est CE fichier que l'écran
+        # "Mes Parties" (library_hub.py) lit réellement pour l'affichage.
+        details = {"correct": [], "wrong": [], "unanswered": []}
+        for q in detailed_questions:
+            if q["user_answer"] == "Non répondue":
+                details["unanswered"].append({"question": q["question"]})
+            elif q["is_correct"]:
+                details["correct"].append({
+                    "question": q["question"],
+                    "your_answer": q["user_answer"],
+                })
+            else:
+                details["wrong"].append({
+                    "question": q["question"],
+                    "your_answer": q["user_answer"],
+                    "correct_answer": q["correct_answer"],
+                })
+
+        try:
+            LibraryManager.save_game_session({
+                "session_id": f"SESSION_{uuid.uuid4().hex[:12]}",
+                "quiz_title": self.quiz_title,
+                "niveau": self.quiz_niveau,
+                "mode": "Solo",
+                "played_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "score": f"{self.score}/{total_questions}",
+                "percentage": int((self.score / total_questions) * 100) if total_questions > 0 else 0,
+                "xp": self.total_xp,
+                "details": details,
+            })
+        except Exception as e:
+            print(f"⚠️ Erreur lors de l'enregistrement dans Mes Parties : {e}")
+
+        # Crédite l'XP gagnée sur le compte connecté (visible sur le badge de l'accueil,
+        # et dans les statistiques des Paramètres).
+        if session.est_connecte():
+            try:
+                session.crediter_xp(self.total_xp, self.score)
+            except Exception as e:
+                print(f"⚠️ Erreur lors du crédit d'XP : {e}")
+
         # Inclusion explicite du sujet dans le dictionnaire résultat
         quiz_data = {
             "sujet": self.quiz_title,
             "quiz_title": self.quiz_title,
             "title": self.quiz_title,
+            "niveau": self.quiz_niveau,
             "questions": detailed_questions,
             "average_time": average_time,
             "total_time": self.total_time,

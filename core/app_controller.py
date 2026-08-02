@@ -1150,11 +1150,20 @@ class AppController:
         self.clear_page()
         stop_music()
 
+        # On construit un vrai dict (sujet + niveau + questions) au lieu de passer
+        # juste la liste de questions — sinon PlayQuizPage ne peut pas connaître
+        # le titre ni le niveau et retombe sur "Quiz Solo" par défaut.
+        quiz_pour_page = {
+            "sujet": self.current_quiz_settings.get("sujet", "Quiz Solo"),
+            "niveau": self.current_quiz_settings.get("niveau", ""),
+            "questions": self.current_quiz,
+        }
+
         self.play = PlayQuizPage(
             self.root,
-            self.current_quiz,
-            self.show_result
-            
+            quiz_pour_page,
+            self.show_result,
+            cancel_callback=self.show_home,
         )
 
         self.play.pack(fill="both", expand=True)
@@ -1182,6 +1191,10 @@ class AppController:
 
         self.root.after(2500, resume_music)
 
+        quiz_data = quiz_data or {}
+        titre_quiz = quiz_data.get("sujet") or quiz_data.get("quiz_title") or "Quiz"
+        niveau_quiz = quiz_data.get("niveau", "")
+
         self.result = ResultPage(
             self.root,
             score,
@@ -1190,7 +1203,9 @@ class AppController:
             max_combo,
             average_time,
             self.regenerate_quiz,
-            self.show_home
+            self.show_home,
+            quiz_title=titre_quiz,
+            niveau=niveau_quiz,
         )
 
         self.result.pack(fill="both", expand=True)

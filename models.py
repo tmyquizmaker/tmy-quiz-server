@@ -28,6 +28,10 @@ class User(db.Model):
     # automatiquement le token de tout appareil précédemment connecté.
     current_session_id = db.Column(db.String(64), nullable=True)
 
+    # --- Statistiques simples (mises à jour à chaque partie créditée en XP) ---
+    total_parties = db.Column(db.Integer, default=0, nullable=False)
+    meilleur_score = db.Column(db.Integer, default=0, nullable=False)
+
     scores = db.relationship("GameHistory", backref="user", lazy=True)
 
     def to_public_dict(self):
@@ -42,6 +46,8 @@ class User(db.Model):
             "xp": self.xp,
             "niveau": 1 + (self.xp // 1000),  # 1000 XP par niveau — ajustez ici si besoin
             "avatar_base64": self.avatar_base64,
+            "total_parties": self.total_parties,
+            "meilleur_score": self.meilleur_score,
         }
 
 

@@ -7,9 +7,42 @@ from models import GameHistory, User, Quiz
 scores_bp = Blueprint("scores", __name__)
 
 
+@scores_bp.route("/me/xp", methods=["POST"])
+@jwt_required()
+def crediter_xp():
+    """Crédite de l'XP sur le compte connecté, pour un quiz solo IA ou une
+    partie 'Questions entre amis' — pas besoin de quiz_id (contrairement à
+    /quiz/<id>/score) puisque ces quiz ne sont pas stockés dans la table Quiz."""
+    data = request.get_json(silent=True) or {}
+    xp_gagne = data.get("xp")
+    score = data.get("score")
+
+    if not isinstance(xp_gagne, int) or xp_gagne < 0:
+        return jsonify({"error": "XP invalide"}), 400
+
+    user = User.query.get(get_jwt_identity())
+    if not user:
+        return jsonify({"error": "Utilisateur introuvable"}), 404
+
+    user.xp += xp_gagne
+    user.total_parties += 1
+    if isinstance(score, int) and score > user.meilleur_score:
+        user.meilleur_score = score
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "XP créditée",
+        "xp_gagne": xp_gagne,
+        "user": user.to_public_dict(),
+    }), 201
+
+
 @scores_bp.route("/quiz/<int:quiz_id>/score", methods=["POST"])
 @jwt_required()
 def enregistrer_score(quiz_id):
+    """Réservé aux quiz réellement stockés dans la table Quiz (bibliothèque
+    partagée serveur, pas encore utilisée par les quiz générés par l'IA)."""
     data = request.get_json(silent=True) or {}
     score = data.get("score")
     duree = data.get("duree_secondes")
@@ -32,9 +65,10 @@ def enregistrer_score(quiz_id):
     )
     db.session.add(partie)
 
-    # --- XP : chaque quiz joué rapporte de l'XP égal au score obtenu.
-    # Changez cette ligne si vous voulez une autre formule (ex: score * 10).
     user.xp += score
+    user.total_parties += 1
+    if score > user.meilleur_score:
+        user.meilleur_score = score
 
     db.session.commit()
 
@@ -49,18 +83,13 @@ def enregistrer_score(quiz_id):
 @jwt_required()
 def mes_stats():
     """Statistiques personnelles de l'utilisateur connecté (pour la page Paramètres)."""
-    user_id = get_jwt_identity()
-
-    total_parties = GameHistory.query.filter_by(user_id=user_id).count()
-    meilleur_score = (
-        db.session.query(db.func.max(GameHistory.score))
-        .filter_by(user_id=user_id)
-        .scalar()
-    ) or 0
+    user = User.query.get(get_jwt_identity())
+    if not user:
+        return jsonify({"error": "Utilisateur introuvable"}), 404
 
     return jsonify({
-        "total_parties": total_parties,
-        "meilleur_score": meilleur_score,
+        "total_parties": user.total_parties,
+        "meilleur_score": user.meilleur_score,
     }), 200
 
 

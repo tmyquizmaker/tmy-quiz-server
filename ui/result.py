@@ -31,7 +31,9 @@ class ResultPage(ctk.CTkFrame):
         average_time,
         regenerate_callback,
         home_callback,
-        quiz_callback=None
+        quiz_callback=None,
+        quiz_title="Quiz",
+        niveau=""
     ):
         super().__init__(master)
 
@@ -111,7 +113,7 @@ class ResultPage(ctk.CTkFrame):
 
         self.title_label = ctk.CTkLabel(
             self.center_text_frame,
-            text="🎉 QUIZ TERMINÉ !",
+            text=f"🎓 {quiz_title}" + (f"  •  {niveau}" if niveau else ""),
             font=("Arial", 16, "bold"),
             text_color="#AAAAAA"
         )
