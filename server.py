@@ -20,6 +20,7 @@ from flask import Flask, request
 from flask_migrate import Migrate
 from flask_socketio import SocketIO, emit, join_room
 from datetime import timedelta
+from sqlalchemy import text
 
 # 1. Importation de l'instance DB partagée depuis extensions.py
 from extensions import db, bcrypt, jwt, mail
@@ -94,8 +95,9 @@ with app.app_context():
     db.create_all()
     # Ajout automatique des colonnes manquantes si la table existait déjà
     with db.engine.connect() as conn:
-        conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0;"))
-        conn.execute(db.text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_base64 TEXT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_base64 TEXT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS current_session_id VARCHAR(255);"))
         conn.commit()
     print("✅ Base PostgreSQL à jour avec toutes les colonnes !")
 # --------------------------------------------------------
