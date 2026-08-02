@@ -1,11 +1,12 @@
 """
-Superposition plein écran Ultra-Pro avec logo tournant, carte moderne
-et barre de progression animée pour les opérations réseau (connexion, inscription...).
+Superposition plein écran Ultra-Pro avec logo tournant (assets/logo.png),
+carte moderne et barre de progression animée.
 """
 import os
 import customtkinter as ctk
 from PIL import Image
 
+# Chemin direct vers le logo à la racine du projet
 LOGO_PATH = os.path.join("assets", "logo.png")
 
 
@@ -18,11 +19,17 @@ class LoadingOverlay(ctk.CTkFrame):
         self._progress_val = 0.0
         self._animating_bar = False
 
-        if os.path.exists(LOGO_PATH):
-            try:
+        # Chargement obligatoire du logo depuis assets/logo.png
+        try:
+            if os.path.exists(LOGO_PATH):
                 self._logo_original = Image.open(LOGO_PATH).convert("RGBA")
-            except Exception:
-                self._logo_original = None
+            else:
+                # Fallback de secours si le chemin relatif varie selon le dossier courant
+                alt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "logo.png")
+                self._logo_original = Image.open(alt_path).convert("RGBA")
+        except Exception as e:
+            print(f"Erreur critique lors du chargement du logo pour l'overlay : {e}")
+            self._logo_original = None
 
         # ===============================================
         # CARTE CENTRALE DESIGN
@@ -34,46 +41,47 @@ class LoadingOverlay(ctk.CTkFrame):
             border_width=1,
             border_color="#2B303C"
         )
-        self.card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.45, relheight=0.42)
+        self.card.place(relx=0.5, rely=0.5, anchor="center", width=420, height=260)
 
-        content = ctk.CTkFrame(self.card, fg_color="transparent")
-        content.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.85, relheight=0.85)
+        # 1. Logo animé (haut de la carte)
+        self.logo_label = ctk.CTkLabel(self.card, text="")
+        self.logo_label.place(relx=0.5, rely=0.25, anchor="center")
 
-        # 1. Logo animé ou icône fallback
-        self.logo_label = ctk.CTkLabel(
-            content, text="" if self._logo_original else "🧠", font=("Arial", 50)
-        )
-        self.logo_label.pack(pady=(10, 15))
+        # Affichage initial d'une image fixe si chargée
+        if self._logo_original:
+            init_img = ctk.CTkImage(light_image=self._logo_original, dark_image=self._logo_original, size=(56, 56))
+            self.logo_label.configure(image=init_img)
+            self.logo_label.image = init_img
 
         # 2. Message dynamique
         self.message_label = ctk.CTkLabel(
-            content,
+            self.card,
             text=message,
             font=("Arial", 15, "bold"),
             text_color="#FFFFFF"
         )
-        self.message_label.pack(pady=(0, 20))
+        self.message_label.place(relx=0.5, rely=0.52, anchor="center")
 
         # 3. Barre de progression moderne
         self.progress_bar = ctk.CTkProgressBar(
-            content,
-            width=280,
-            height=8,
-            corner_radius=4,
+            self.card,
+            width=320,
+            height=10,
+            corner_radius=5,
             progress_color="#1F6AA5",
             fg_color="#121620"
         )
         self.progress_bar.set(0.0)
-        self.progress_bar.pack(pady=(0, 10))
+        self.progress_bar.place(relx=0.5, rely=0.72, anchor="center")
 
-        # 4. Petit footer discret
+        # 4. Footer discret
         self.footer = ctk.CTkLabel(
-            content,
+            self.card,
             text="TMY Engine • Sécurisé",
             font=("Arial", 9),
             text_color="#555861"
         )
-        self.footer.pack(pady=(5, 0))
+        self.footer.place(relx=0.5, rely=0.90, anchor="center")
 
     def afficher(self, message=None):
         if message:
@@ -81,11 +89,12 @@ class LoadingOverlay(ctk.CTkFrame):
         self.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.lift()
         
-        # Lancer les animations (Logo + Barre de progression fluide)
+        # Lancer les animations du logo et de la barre
         if self._logo_original:
             self._animer_logo()
         
         self._animating_bar = True
+        self._progress_val = 0.0
         self._animer_barre()
 
     def masquer(self):
@@ -100,22 +109,26 @@ class LoadingOverlay(ctk.CTkFrame):
         self.place_forget()
 
     def _animer_logo(self):
-        if not self.winfo_ismapped():
+        if not self.winfo_ismapped() or not self._logo_original:
             return
         self._angle = (self._angle - 6) % 360
-        image_tournee = self._logo_original.rotate(self._angle, expand=False)
-        ctk_img = ctk.CTkImage(light_image=image_tournee, dark_image=image_tournee, size=(64, 64))
-        self.logo_label.configure(image=ctk_img, text="")
-        self.logo_label.image = ctk_img  # Évite le garbage-collection
+        try:
+            image_tournee = self._logo_original.rotate(self._angle, expand=False)
+            ctk_img = ctk.CTkImage(light_image=image_tournee, dark_image=image_tournee, size=(56, 56))
+            self.logo_label.configure(image=ctk_img)
+            self.logo_label.image = ctk_img  # Empêche le garbage collector
+        except Exception:
+            pass
+        
+        self.after(40, self._animer_logo)
 
     def _animer_barre(self):
         if not self._animating_bar or not self.winfo_ismapped():
             return
         
-        # Fait avancer la barre en boucle de manière fluide et dynamique
-        self._progress_val += 0.03
+        self._progress_val += 0.04
         if self._progress_val > 1.0:
             self._progress_val = 0.0
             
         self.progress_bar.set(self._progress_val)
-        self._apres_id = self.after(50, self._animer_barre)
+        self.after(50, self._animer_barre)
