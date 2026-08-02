@@ -1,10 +1,19 @@
+import sys
+import os
 import threading
 import time
 import pygame
 
 pygame.mixer.init()
 
-MUSIC = "assets/music/menu.mp3"
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+MUSIC = resource_path("assets/music/menu.mp3")
 
 
 def start_music():
@@ -26,10 +35,7 @@ def stop_music():
 def resume_music():
     def _play():
         try:
-            # Petite pause pour laisser le canal audio se libérer de la voix
             time.sleep(0.9)
-
-            # Re-initialiser le mixer au cas où la voix l'a fermé
             pygame.mixer.quit()
             pygame.mixer.init()
 
@@ -40,5 +46,4 @@ def resume_music():
         except Exception as e:
             print("Erreur relance musique :", e)
 
-    # On lance la musique dans un thread séparé pour ne pas bloquer l'interface
     threading.Thread(target=_play, daemon=True).start()

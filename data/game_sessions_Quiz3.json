@@ -1,0 +1,53 @@
+[
+    {
+        "session_id": "SESSION_83de29eeadf7",
+        "quiz_title": "Physique",
+        "niveau": "Débutant",
+        "mode": "Solo",
+        "played_at": "2026-08-02 15:55:23",
+        "score": "6/8",
+        "percentage": 75,
+        "xp": 5451,
+        "details": {
+            "correct": [
+                {
+                    "question": "Quelle unité de mesure du Système International d'Unités (SI) est spécifiquement utilisée pour quantifier la force ?",
+                    "your_answer": "A. Le Newton"
+                },
+                {
+                    "question": "Quel mode de transfert de chaleur implique le contact direct entre des particules vibrantes, typiquement observé dans les solides ?",
+                    "your_answer": "A. La conduction"
+                },
+                {
+                    "question": "Quelle forme d'énergie est directement associée à la hauteur ou à la position d'un objet dans un champ de gravité ?",
+                    "your_answer": "A. Énergie potentielle de pesanteur"
+                },
+                {
+                    "question": "En électricité, quelle grandeur physique fondamentale s'oppose directement et freine le passage du courant électrique dans un circuit ?",
+                    "your_answer": "A. La résistance"
+                },
+                {
+                    "question": "Quel type d'onde, comme le son, nécessite absolument un milieu matériel (solide, liquide ou gaz) pour pouvoir se propager ?",
+                    "your_answer": "A. Une onde mécanique"
+                },
+                {
+                    "question": "Quelle grandeur physique mesure l'agitation thermique moyenne des particules constituant un corps ou une substance ?",
+                    "your_answer": "A. La température"
+                }
+            ],
+            "wrong": [
+                {
+                    "question": "En physique, comment décrit-on communément le courant électrique circulant dans un conducteur, tel qu'un fil de cuivre ?",
+                    "your_answer": "D. L'énergie dissipée",
+                    "correct_answer": "A. Le flux de charges électriques"
+                },
+                {
+                    "question": "Quel phénomène optique décrit le changement de direction d'une onde lumineuse lorsqu'elle passe d'un milieu transparent à un autre ?",
+                    "your_answer": "C. La polarisation",
+                    "correct_answer": "A. La réfraction"
+                }
+            ],
+            "unanswered": []
+        }
+    }
+]

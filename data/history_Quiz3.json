@@ -1,0 +1,113 @@
+[
+    {
+        "id": 1,
+        "mode": "Solo",
+        "sujet": "Physique",
+        "niveau": "Débutant",
+        "score": 6,
+        "total": 8,
+        "percentage": 75,
+        "xp": 5451,
+        "rank": "🥈 2ème",
+        "average_time": 6.5,
+        "questions": [
+            {
+                "question": "Quelle unité de mesure du Système International d'Unités (SI) est spécifiquement utilisée pour quantifier la force ?",
+                "options": [
+                    "A. Le Newton",
+                    "B. Le Joule",
+                    "C. Le Watt",
+                    "D. Le Pascal"
+                ],
+                "user_answer": "A. Le Newton",
+                "correct_answer": "A. Le Newton",
+                "is_correct": true
+            },
+            {
+                "question": "En physique, comment décrit-on communément le courant électrique circulant dans un conducteur, tel qu'un fil de cuivre ?",
+                "options": [
+                    "A. Le flux de charges électriques",
+                    "B. La résistance du matériau",
+                    "C. La différence de potentiel",
+                    "D. L'énergie dissipée"
+                ],
+                "user_answer": "D. L'énergie dissipée",
+                "correct_answer": "A. Le flux de charges électriques",
+                "is_correct": false
+            },
+            {
+                "question": "Quel mode de transfert de chaleur implique le contact direct entre des particules vibrantes, typiquement observé dans les solides ?",
+                "options": [
+                    "A. La conduction",
+                    "B. La convection",
+                    "C. Le rayonnement",
+                    "D. L'évaporation"
+                ],
+                "user_answer": "A. La conduction",
+                "correct_answer": "A. La conduction",
+                "is_correct": true
+            },
+            {
+                "question": "Quel phénomène optique décrit le changement de direction d'une onde lumineuse lorsqu'elle passe d'un milieu transparent à un autre ?",
+                "options": [
+                    "A. La réfraction",
+                    "B. La diffraction",
+                    "C. La polarisation",
+                    "D. L'absorption"
+                ],
+                "user_answer": "C. La polarisation",
+                "correct_answer": "A. La réfraction",
+                "is_correct": false
+            },
+            {
+                "question": "Quelle forme d'énergie est directement associée à la hauteur ou à la position d'un objet dans un champ de gravité ?",
+                "options": [
+                    "A. Énergie potentielle de pesanteur",
+                    "B. Énergie cinétique",
+                    "C. Énergie thermique",
+                    "D. Énergie nucléaire"
+                ],
+                "user_answer": "A. Énergie potentielle de pesanteur",
+                "correct_answer": "A. Énergie potentielle de pesanteur",
+                "is_correct": true
+            },
+            {
+                "question": "En électricité, quelle grandeur physique fondamentale s'oppose directement et freine le passage du courant électrique dans un circuit ?",
+                "options": [
+                    "A. La résistance",
+                    "B. La tension",
+                    "C. L'ampérage",
+                    "D. La puissance"
+                ],
+                "user_answer": "A. La résistance",
+                "correct_answer": "A. La résistance",
+                "is_correct": true
+            },
+            {
+                "question": "Quel type d'onde, comme le son, nécessite absolument un milieu matériel (solide, liquide ou gaz) pour pouvoir se propager ?",
+                "options": [
+                    "A. Une onde mécanique",
+                    "B. Une onde électromagnétique",
+                    "C. Une onde gravitationnelle",
+                    "D. Un photon"
+                ],
+                "user_answer": "A. Une onde mécanique",
+                "correct_answer": "A. Une onde mécanique",
+                "is_correct": true
+            },
+            {
+                "question": "Quelle grandeur physique mesure l'agitation thermique moyenne des particules constituant un corps ou une substance ?",
+                "options": [
+                    "A. La température",
+                    "B. La chaleur",
+                    "C. L'énergie cinétique",
+                    "D. La pression"
+                ],
+                "user_answer": "A. La température",
+                "correct_answer": "A. La température",
+                "is_correct": true
+            }
+        ],
+        "date": "02/08/2026 15:55"
+    }
+]

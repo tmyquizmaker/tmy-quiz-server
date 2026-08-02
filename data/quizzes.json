@@ -170,5 +170,189 @@
             "difficulty": "medium",
             "time": 25
         }
+    ],
+    [
+        {
+            "question": "Quelle unité de mesure du Système International d'Unités (SI) est spécifiquement utilisée pour quantifier la force ?",
+            "A": "Le Newton",
+            "B": "Le Joule",
+            "C": "Le Watt",
+            "D": "Le Pascal",
+            "correct": "A",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "En physique, comment décrit-on communément le courant électrique circulant dans un conducteur, tel qu'un fil de cuivre ?",
+            "A": "Le flux de charges électriques",
+            "B": "La résistance du matériau",
+            "C": "La différence de potentiel",
+            "D": "L'énergie dissipée",
+            "correct": "A",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "Quel mode de transfert de chaleur implique le contact direct entre des particules vibrantes, typiquement observé dans les solides ?",
+            "A": "La conduction",
+            "B": "La convection",
+            "C": "Le rayonnement",
+            "D": "L'évaporation",
+            "correct": "A",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quel phénomène optique décrit le changement de direction d'une onde lumineuse lorsqu'elle passe d'un milieu transparent à un autre ?",
+            "A": "La réfraction",
+            "B": "La diffraction",
+            "C": "La polarisation",
+            "D": "L'absorption",
+            "correct": "A",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quelle forme d'énergie est directement associée à la hauteur ou à la position d'un objet dans un champ de gravité ?",
+            "A": "Énergie potentielle de pesanteur",
+            "B": "Énergie cinétique",
+            "C": "Énergie thermique",
+            "D": "Énergie nucléaire",
+            "correct": "A",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "En électricité, quelle grandeur physique fondamentale s'oppose directement et freine le passage du courant électrique dans un circuit ?",
+            "A": "La résistance",
+            "B": "La tension",
+            "C": "L'ampérage",
+            "D": "La puissance",
+            "correct": "A",
+            "difficulty": "easy",
+            "time": 15
+        },
+        {
+            "question": "Quel type d'onde, comme le son, nécessite absolument un milieu matériel (solide, liquide ou gaz) pour pouvoir se propager ?",
+            "A": "Une onde mécanique",
+            "B": "Une onde électromagnétique",
+            "C": "Une onde gravitationnelle",
+            "D": "Un photon",
+            "correct": "A",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quelle grandeur physique mesure l'agitation thermique moyenne des particules constituant un corps ou une substance ?",
+            "A": "La température",
+            "B": "La chaleur",
+            "C": "L'énergie cinétique",
+            "D": "La pression",
+            "correct": "A",
+            "difficulty": "easy",
+            "time": 15
+        }
+    ],
+    [
+        {
+            "question": "Quel empereur romain a légalisé le christianisme dans l'Empire avec l'édit de Milan en 313 ap. J.-C. ?",
+            "A": "Auguste",
+            "B": "Néron",
+            "C": "Constantin Ier",
+            "D": "Dioclétien",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quel célèbre philosophe grec est connu pour sa méthode de 'maïeutique' et fut le maître de Platon ?",
+            "A": "Aristote",
+            "B": "Socrate",
+            "C": "Héraclite",
+            "D": "Démocrite",
+            "correct": "B",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Durant les Croisades, quelle ville sainte fut l'objet principal des efforts de conquête des Chrétiens occidentaux ?",
+            "A": "Constantinople",
+            "B": "Alexandrie",
+            "C": "Jérusalem",
+            "D": "Antioche",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quelle guerre majeure opposa la France et l'Angleterre de 1337 à 1453, principalement pour des questions de succession ?",
+            "A": "Guerre de Cent Ans",
+            "B": "Guerre des Deux-Roses",
+            "C": "Guerre de Trente Ans",
+            "D": "Guerre de Succession d'Autriche",
+            "correct": "A",
+            "difficulty": "medium",
+            "time": 25
+        },
+        {
+            "question": "Qui est l'auteur du chef-d'œuvre 'La Joconde' et un esprit universel de la Renaissance italienne ?",
+            "A": "Michel-Ange",
+            "B": "Raphaël",
+            "C": "Donatello",
+            "D": "Léonard de Vinci",
+            "correct": "D",
+            "difficulty": "medium",
+            "time": 18
+        },
+        {
+            "question": "Quel explorateur portugais fut le premier Européen à atteindre l'Inde par voie maritime en contournant l'Afrique ?",
+            "A": "Christophe Colomb",
+            "B": "Vasco de Gama",
+            "C": "Fernand de Magellan",
+            "D": "Jacques Cartier",
+            "correct": "B",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "En quelle année a eu lieu la prise de la Bastille, événement symbolique marquant le début de la Révolution française ?",
+            "A": "1789",
+            "B": "1776",
+            "C": "1792",
+            "D": "1804",
+            "correct": "A",
+            "difficulty": "medium",
+            "time": 15
+        },
+        {
+            "question": "Quelle invention majeure du XVIIIe siècle, par James Watt, a grandement accéléré la Révolution industrielle ?",
+            "A": "Le métier à tisser",
+            "B": "La machine à vapeur",
+            "C": "La navette volante",
+            "D": "Le télégraphe",
+            "correct": "B",
+            "difficulty": "medium",
+            "time": 20
+        },
+        {
+            "question": "Quel événement a déclenché directement la Première Guerre mondiale en 1914, mettant le feu aux poudres en Europe ?",
+            "A": "L'assassinat de l'Archiduc François-Ferdinand",
+            "B": "La crise de Fachoda",
+            "C": "L'annexion de la Bosnie-Herzégovine",
+            "D": "La guerre des Boers",
+            "correct": "A",
+            "difficulty": "medium",
+            "time": 25
+        },
+        {
+            "question": "Quel dirigeant était à la tête de l'Union soviétique pendant la majeure partie de la Seconde Guerre mondiale ?",
+            "A": "Lénine",
+            "B": "Léon Trotsky",
+            "C": "Joseph Staline",
+            "D": "Nikita Khrouchtchev",
+            "correct": "C",
+            "difficulty": "medium",
+            "time": 20
+        }
     ]
 ]

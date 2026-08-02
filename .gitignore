@@ -30,3 +30,8 @@ __pycache__/
 # OS (Mac / Windows)
 .DS_Store
 Thumbs.db
+
+# PyInstaller & Build
+build/
+dist/
+*.spec

@@ -1,0 +1,31 @@
+[
+    {
+        "id": 1,
+        "title": "yggigeigu",
+        "teacher_name": "uggew",
+        "total_questions": 2,
+        "questions": [
+            {
+                "question": "uhihiueueww",
+                "A": "uiuuwedge",
+                "B": "bueuhuhr",
+                "C": "hihihf",
+                "D": "uiiufuibf",
+                "correct": "A",
+                "time": "15s",
+                "points": "10"
+            },
+            {
+                "question": "Question bubiubuib2",
+                "A": "uuhuihfire",
+                "B": "biurfubrf",
+                "C": "iibiububrfe",
+                "D": "hbubfbu",
+                "correct": "C",
+                "time": "20s",
+                "points": "10"
+            }
+        ],
+        "created_at": "2026-08-02 11:16:32"
+    }
+]
