@@ -45,7 +45,7 @@ class User(db.Model):
             "email": self.email,
             "email_verified": self.email_verified,
             "xp": self.xp,
-            "niveau": 1 + (self.xp // 1000),  # 1000 XP par niveau — ajustez ici si besoin
+            "niveau": 1 + (self.xp // 10000),  # 10000 XP par niveau — ajustez ici si besoin
             "avatar_base64": self.avatar_base64,
         }
 
