@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from extensions import db
 
@@ -44,10 +45,8 @@ class User(db.Model):
             "email": self.email,
             "email_verified": self.email_verified,
             "xp": self.xp,
-            "niveau": 1 + (self.xp // 10000),  # 10000 XP par niveau — ajustez ici si besoin
+            "niveau": 1 + (self.xp // 1000),  # 1000 XP par niveau — ajustez ici si besoin
             "avatar_base64": self.avatar_base64,
-            "total_parties": self.total_parties,
-            "meilleur_score": self.meilleur_score,
         }
 
 
@@ -114,3 +113,63 @@ class VerificationCode(db.Model):
     used = db.Column(db.Boolean, default=False, nullable=False)
 
     user = db.relationship("User")
+
+
+class SavedQuiz(db.Model):
+    """Bibliothèque de quiz créés par l'utilisateur ('Mes Créations'), stockée
+    sur le compte — plus jamais perdue au rebuild de l'app desktop, et visible
+    depuis n'importe quel appareil connecté à ce compte."""
+    __tablename__ = "saved_quizzes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    teacher_name = db.Column(db.String(120))
+    questions_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    owner = db.relationship("User", backref="quiz_crees")
+
+    def to_dict(self):
+        questions = json.loads(self.questions_json) if self.questions_json else []
+        return {
+            "id": self.id,
+            "title": self.title,
+            "teacher_name": self.teacher_name,
+            "questions": questions,
+            "total_questions": len(questions),
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+
+class GameSession(db.Model):
+    """Historique des parties jouées, stocké sur le compte — même principe
+    que SavedQuiz, pour l'onglet 'Historique des Parties'."""
+    __tablename__ = "game_sessions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    session_code = db.Column(db.String(60), nullable=False)
+    quiz_title = db.Column(db.String(200))
+    niveau = db.Column(db.String(50))
+    mode = db.Column(db.String(30))
+    played_at = db.Column(db.String(30))
+    score = db.Column(db.String(20))
+    percentage = db.Column(db.Integer)
+    xp = db.Column(db.Integer)
+    details_json = db.Column(db.Text)
+
+    owner = db.relationship("User", backref="parties_jouees")
+
+    def to_dict(self):
+        return {
+            "session_id": self.session_code,
+            "quiz_title": self.quiz_title,
+            "niveau": self.niveau,
+            "mode": self.mode,
+            "played_at": self.played_at,
+            "score": self.score,
+            "percentage": self.percentage,
+            "xp": self.xp,
+            "details": json.loads(self.details_json) if self.details_json else {},
+        }
