@@ -4,6 +4,11 @@ TMY Quiz Maker - Serveur WebSocket Central
 ===========================================
 """
 
+# ⚠️ IMPORTANT : ce patch doit être fait EN TOUT PREMIER, avant tout autre
+# import (y compris `os`, `requests`, `flask`, etc.). S'il est fait trop tard,
+# ou si gunicorn le fait après qu'un module ait déjà importé `ssl`/`socket`,
+# on obtient une erreur "maximum recursion depth exceeded" sur les appels
+# HTTPS (comme l'envoi d'email via l'API Brevo).
 from gevent import monkey
 monkey.patch_all()
 
@@ -11,58 +16,85 @@ import os
 import random
 import threading
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
+from flask_jwt_extended import jwt_required
 from flask_migrate import Migrate
 from flask_socketio import SocketIO, emit, join_room
 from datetime import timedelta
 from sqlalchemy import text
 
+# 1. Importation de l'instance DB partagée depuis extensions.py
 from extensions import db, bcrypt, jwt, mail
+
+# Blueprints d'authentification et de scores
 from auth import auth_bp
 from scores import scores_bp
+
+# Importation depuis le sous-dossier ai/
 from ai.ai_generator import AIGenerator
 
 app = Flask(__name__)
 
+# ========================================================
+# ⚙️ CONFIGURATION BASE DE DONNÉES & MIGRATIONS
+# ========================================================
+# Utilise la variable d'environnement DATABASE_URL (Neon/Render) ou bascule sur un fichier local
 database_url = os.environ.get("DATABASE_URL", "sqlite:///local_fallback.db")
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Évite les erreurs "SSL connection has been closed unexpectedly" avec les bases
+# hébergées (Render/Neon) qui coupent les connexions inactives : SQLAlchemy vérifie
+# la connexion avant chaque requête et en ouvre une nouvelle si besoin.
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
     "pool_recycle": 280,
 }
 
+# --- Config JWT ---
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "change-moi-en-production")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
+# Nécessaire pour que le callback de connexion unique (token_in_blocklist_loader
+# dans auth.py) soit bien appelé sur chaque requête authentifiée.
 app.config["JWT_BLOCKLIST_ENABLED"] = True
 app.config["JWT_BLOCKLIST_TOKEN_CHECKS"] = ["access", "refresh"]
 
+# --- Config token de vérification email / reset password ---
 app.config["SECURITY_PASSWORD_SALT"] = os.environ.get("SECURITY_PASSWORD_SALT", "change-moi-aussi")
 app.config["EMAIL_TOKEN_MAX_AGE_SECONDS"] = 60 * 60 * 24
 
+# --- Config Flask-Mail ---
 app.config["MAIL_SERVER"] = os.environ.get("MAIL_SERVER", "smtp-relay.brevo.com")
 app.config["MAIL_PORT"] = int(os.environ.get("MAIL_PORT", 587))
 app.config["MAIL_USE_TLS"] = True
 app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
 app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
 app.config["MAIL_DEFAULT_SENDER"] = os.environ.get("MAIL_DEFAULT_SENDER", "no-reply@votre-app.com")
+# URL PUBLIQUE de votre logo pour l'en-tête des emails (ex: lien "raw" GitHub vers assets/logo.png).
+# Un email ne peut pas charger un fichier local sur votre disque, il faut une URL accessible sur internet.
 app.config["EMAIL_LOGO_URL"] = os.environ.get("EMAIL_LOGO_URL", "")
 app.config["APP_BASE_URL"] = os.environ.get("APP_BASE_URL", "http://localhost:5000")
 
+# 2. Initialisation de db avec app, puis de Migrate
 db.init_app(app)
 bcrypt.init_app(app)
 jwt.init_app(app)
 mail.init_app(app)
 migrate = Migrate(app, db)
 
+# Chargement des modèles pour la détection par Alembic / Flask-Migrate
 import models
 
+# --------------------------------------------------------
+# 🔨 MIGRATION & CRÉATION DES TABLES POSTGRESQL
+# --------------------------------------------------------
 with app.app_context():
     db.create_all()
+    # Ajout automatique des colonnes manquantes si la table existait déjà
     with db.engine.connect() as conn:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_base64 TEXT;"))
@@ -71,22 +103,73 @@ with app.app_context():
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS meilleur_score INTEGER DEFAULT 0 NOT NULL;"))
         conn.commit()
     print("✅ Base PostgreSQL à jour avec toutes les colonnes (statistiques incluses) !")
+# --------------------------------------------------------
 
+# 3. Enregistrement des routes d'authentification et de scores
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(scores_bp)
 
+# ========================================================
+# 🟢 ROUTE PING/PONG (Maintien en éveil Render)
+# ========================================================
 @app.route("/ping", methods=["GET"])
 def ping():
     return "pong", 200
 
+# ========================================================
+# 🔌 INITIALISATION SOCKETIO & MOTEUR IA
+# ========================================================
 socketio = SocketIO(app, cors_allowed_origins="*")
 ai_engine = AIGenerator()
 
+
+@app.route("/quiz/generate", methods=["POST"])
+@jwt_required()
+def generate_quiz_route():
+    """Génère un quiz avec Gemini, entièrement côté serveur — la clé GEMINI_API_KEY
+    ne quitte jamais Render. Le client desktop appelle cette route au lieu
+    d'utiliser sa propre copie d'AIGenerator (retirée pour la distribution publique)."""
+    data = request.get_json(silent=True) or {}
+    sujet = (data.get("sujet") or "").strip()
+    niveau = data.get("niveau", "Intermédiaire")
+    regeneration = bool(data.get("regeneration", False))
+
+    if not sujet:
+        return jsonify({"error": "Le sujet est requis"}), 400
+
+    try:
+        nombre = int(data.get("nombre", 10))
+    except (TypeError, ValueError):
+        nombre = 10
+    nombre = max(1, min(nombre, 30))  # garde-fou raisonnable
+
+    try:
+        questions = ai_engine.generate_quiz(
+            sujet=sujet,
+            nombre_questions=nombre,
+            niveau=niveau,
+            regeneration=regeneration,
+            sauvegarder=False,  # la bibliothèque de l'utilisateur est gérée côté client
+        )
+    except Exception as exc:
+        app.logger.error(f"Erreur génération IA : {exc}")
+        return jsonify({"error": "La génération a échoué. Réessayez dans un instant."}), 500
+
+    return jsonify({"sujet": sujet, "niveau": niveau, "questions": questions}), 200
+
+# Dictionnaire des salons actifs :
+# { "PIN": {"title": str, "players": [str], "questions": [], "current_question": 0, "teacher_name": str, "scores": dict} }
 active_lobbies = {}
+
+# Association sid (connexion socket) -> (pin, nom_joueur), pour retrouver la
+# salle d'un joueur au moment de sa déconnexion (mode "party" uniquement).
 sid_to_player = {}
 
 
 def build_leaderboard(lobby):
+    """Construit le classement complet : tous les joueurs de la salle,
+    avec égalités = même rang (ex: 30, 20, 20 -> rangs 1, 2, 2).
+    """
     scores = lobby.get("scores", {})
     noms = list(lobby.get("players", []))
 
@@ -173,6 +256,7 @@ def handle_join_room(data):
 
         join_room(pin)
 
+        # 1. Confirmer à l'élève (en incluant la liste actuelle des joueurs)
         emit(
             "join_response",
             {
@@ -183,6 +267,7 @@ def handle_join_room(data):
             },
         )
 
+        # 2. Prévenir le salon (prof et camarades)
         emit(
             "player_joined",
             {
@@ -203,6 +288,9 @@ def handle_join_room(data):
         print(f"❌ Échec : PIN [{pin}] inexistant.")
 
 
+# ========================================================
+# 🚀 DÉMARRAGE DU QUIZ ET TRANSMISSION DE LA 1ÈRE QUESTION
+# ========================================================
 @socketio.on("start_quiz")
 def handle_start_quiz(data):
     pin = data.get("pin", "").replace(" ", "")
@@ -222,6 +310,7 @@ def handle_start_quiz(data):
             f"🚀 Lancement du quiz '{title}' par '{teacher_name}' pour le salon [{pin}] avec {len(questions)} questions"
         )
 
+        # Diffuser à tous les élèves de la salle (avec teacher_name et title)
         emit(
             "quiz_started",
             {
@@ -235,6 +324,9 @@ def handle_start_quiz(data):
         )
 
 
+# ========================================================
+# ⏭️ PASSAGE À LA QUESTION SUIVANTE (PROFESSEUR SEULEMENT)
+# ========================================================
 @socketio.on("next_question")
 def handle_next_question(data):
     pin = data.get("pin", "").replace(" ", "")
@@ -251,6 +343,7 @@ def handle_next_question(data):
             print(
                 f"⏭️ Salon [{pin}] -> Passage à la question {current_index + 1}/{total_questions}"
             )
+            # On informe TOUS les élèves du salon de changer de question
             emit("change_question", {"question_index": current_index}, to=pin)
         else:
             if not lobby.get("quiz_ended_sent"):
@@ -260,6 +353,9 @@ def handle_next_question(data):
                 emit("quiz_ended", {"pin": pin, "leaderboard": leaderboard}, to=pin)
 
 
+# ========================================================
+# 🛑 ANNULATION DU QUIZ PAR LE PROFESSEUR
+# ========================================================
 @socketio.on("cancel_quiz")
 def handle_cancel_quiz(data):
     pin = data.get("pin", "").replace(" ", "")
@@ -269,6 +365,9 @@ def handle_cancel_quiz(data):
         del active_lobbies[pin]
 
 
+# ========================================================
+# 📊 MISE À JOUR DU CLASSEMENT HÔTE EN TEMPS RÉEL
+# ========================================================
 @socketio.on("update_score")
 def handle_update_score(data):
     pin = data.get("pin", "").replace(" ", "")
@@ -289,6 +388,7 @@ def handle_update_score(data):
         leaderboard = build_leaderboard(lobby)
         emit("leaderboard_update", {"players": leaderboard}, to=pin)
 
+        # Détection : dernière question + tout le monde a répondu -> fin synchronisée
         lobby.setdefault("answered_current", set())
         lobby["answered_current"].add(player)
 
@@ -302,14 +402,21 @@ def handle_update_score(data):
             emit("quiz_ended", {"pin": pin, "leaderboard": leaderboard}, to=pin)
 
 
+# ========================================================
+# 🎉 MODE MULTIJOUEUR — NIVEAU 1 : "QUESTIONS ENTRE AMIS"
+# ========================================================
+
 PALIERS_DIFFICULTE = ["easy", "medium", "hard"]
 
 
 def _normaliser_sujet(sujet):
+    """Normalise un sujet pour détecter les doublons (espaces, casse)."""
     return " ".join((sujet or "").strip().lower().split())
 
 
 def _construire_file_sujets(lobby):
+    """Construit la liste des sujets UNIQUES (dédupliqués, ordre mélangé)
+    à partir de tous les sujets proposés par les joueurs de la salle."""
     vus = set()
     sujets_dedup = []
     for sujet in lobby.get("subjects", {}).values():
@@ -323,6 +430,7 @@ def _construire_file_sujets(lobby):
 
 @socketio.on("create_party_room")
 def handle_create_party_room(data):
+    """Créé une salle du Niveau 1. L'hôte propose déjà son propre sujet."""
     pin = data.get("pin", "").replace(" ", "")
     host_name = data.get("name", "").strip()
     subject = data.get("subject", "").strip()
@@ -350,6 +458,7 @@ def handle_create_party_room(data):
 
 @socketio.on("join_party_room")
 def handle_join_party_room(data):
+    """Rejoint une salle du Niveau 1 avec son propre sujet."""
     pin = data.get("pin", "").replace(" ", "")
     player_name = data.get("name", "").strip()
     subject = data.get("subject", "").strip()
@@ -397,6 +506,7 @@ def handle_join_party_room(data):
     emit("player_joined", {"name": player_name, "players": lobby["players"]}, to=pin)
     print(f"✅ '{player_name}' a rejoint la salle party [{pin}] | sujet: {subject}")
 
+    # Démarrage automatique 30s après avoir atteint l'effectif cible
     cible = lobby.get("max_players")
     if (
         cible
@@ -421,6 +531,7 @@ def _demarrer_partie_auto(pin):
 
 @socketio.on("start_party_quiz")
 def handle_start_party_quiz(data):
+    """Lancement manuel de la partie par l'hôte."""
     pin = data.get("pin", "").replace(" ", "")
     _lancer_partie(pin)
 
@@ -488,6 +599,7 @@ def _envoyer_prochaine_question_party(pin):
 
 @socketio.on("party_answer")
 def handle_party_answer(data):
+    """Réponse d'un joueur à une question du mode party."""
     pin = data.get("pin", "").replace(" ", "")
     player = data.get("player")
     correct = bool(data.get("correct", False))
