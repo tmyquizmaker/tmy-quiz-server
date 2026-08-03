@@ -15,7 +15,6 @@ from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
-from ai.ai_generator import AIGenerator
 from audio.music import resume_music, stop_music
 from core.network import NetworkClient
 from data.quiz_storage import save_quiz
@@ -55,7 +54,6 @@ class AppController:
     def __init__(self, root):
         self.root = root
 
-        self.ai = AIGenerator()
         self.network = NetworkClient()  # Initialisation du client réseau WebSocket
 
         self.current_quiz_settings = {
@@ -636,6 +634,7 @@ class AppController:
         self.show_create_manual()
         
         if quiz_data and hasattr(self, 'manual_page'):
+            # On laisse 100ms à Tkinter pour construire entièrement les widgets de manual_page
             def apply_quiz_data():
                 if hasattr(self.manual_page, 'load_quiz'):
                     self.manual_page.load_quiz(quiz_data)
@@ -682,6 +681,7 @@ class AppController:
             is_host=True
         )
 
+        # Remplace le PIN généré en interne par QuizLobbyPage par le VRAI PIN confirmé par le serveur
         self.lobby_page.game_pin = confirmed_pin
         if hasattr(self.lobby_page, 'pin_code'):
             formatted_pin = f"{confirmed_pin[:3]} {confirmed_pin[3:]}" if len(confirmed_pin) == 6 else confirmed_pin
@@ -740,6 +740,7 @@ class AppController:
         self.latest_host_leaderboard = []
         self.quiz_finalise = False
 
+        # Calcule le total de points possible du quiz (ex: 40, 70...)
         try:
             self.host_total_points = sum(
                 int("".join(ch for ch in str(q.get("points", 10)) if ch.isdigit()) or 10)
@@ -748,6 +749,7 @@ class AppController:
         except Exception:
             self.host_total_points = 0
 
+        # Écoute le classement en direct dès le lancement (utile pendant ET après le quiz)
         if hasattr(self.network, 'sio') and self.network.sio:
             @self.network.sio.on('leaderboard_update')
             def on_leaderboard_update(data):
@@ -756,6 +758,8 @@ class AppController:
                 if hasattr(self, 'teacher_dashboard') and self.teacher_dashboard.winfo_exists():
                     self.root.after(0, lambda f=players_raw: self.teacher_dashboard.update_dashboard(f))
 
+            # 🔗 Vrai signal de synchronisation : se déclenche dès que TOUS les élèves
+            # ont fini la dernière question — en même temps que leur propre page résultat.
             @self.network.sio.on('quiz_ended')
             def on_quiz_ended_host(data):
                 self.root.after(4500, self._finish_quiz_now)
@@ -822,7 +826,7 @@ class AppController:
         self.start_host_timer()
 
     def render_host_question(self):
-        """Affiche la question actuelle en lecture seule pour le prof."""
+        """Affiche la question actuelle en lecture seule pour le prof — SANS révéler la bonne réponse (utile en projection)."""
         if not self.current_quiz or self.host_current_question_index >= len(self.current_quiz):
             return
 
@@ -844,7 +848,7 @@ class AppController:
         self.show_home()
 
     def host_click_next_question(self):
-        """Appelé lorsque le professeur clique sur le bouton Question Suivante"""
+        """Appelé lorsque le professeur clique sur le bouton Question Suivante (actif seulement chrono écoulé)"""
         clean_pin = getattr(self, 'current_active_pin', None)
         if clean_pin:
             print(f"⏭️ Le professeur demande le passage à la question suivante pour la salle [{clean_pin}]")
@@ -906,6 +910,7 @@ class AppController:
         ).pack(side="left")
 
     def export_results_pdf(self):
+        """Exporte le classement actuel en PDF"""
         try:
             from fpdf import FPDF
         except ImportError:
@@ -954,6 +959,7 @@ class AppController:
         messagebox.showinfo("Export PDF", "Fichier PDF exporté avec succès !")
 
     def export_results_excel(self):
+        """Exporte le classement actuel en Excel (.xlsx)"""
         try:
             import openpyxl
         except ImportError:
@@ -1010,6 +1016,7 @@ class AppController:
         self._host_timer_tick()
 
     def _host_timer_tick(self):
+        """Décompte du chrono prof, tick par seconde."""
         if not hasattr(self, 'next_q_btn'):
             return
 
@@ -1017,6 +1024,8 @@ class AppController:
             self.next_q_btn.configure(state="normal", text="Question Suivante ➔")
             self.host_timer_lbl.configure(text="✅ Prêt")
 
+            # Sur la DERNIÈRE question : on attend UNIQUEMENT le vrai signal
+            # "tout le monde a répondu" (voir on_quiz_ended_host).
             est_derniere = self.current_quiz and self.host_current_question_index >= len(self.current_quiz) - 1
             if est_derniere:
                 self.next_q_btn.configure(state="disabled", text="⏳ En attente des élèves...")
@@ -1028,12 +1037,14 @@ class AppController:
         self.root.after(1000, self._host_timer_tick)
 
     def _finish_quiz_now(self):
+        """Déclenché par le vrai signal réseau 'quiz_ended' — synchronisé avec les élèves."""
         if getattr(self, 'quiz_finalise', False):
             return
         self.quiz_finalise = True
         self.show_host_dashboard()
 
     def _fallback_finish_quiz(self):
+        """Filet de sécurité si la synchro automatique n'arrive jamais."""
         if getattr(self, 'quiz_finalise', False):
             return
         clean_pin = getattr(self, 'current_active_pin', None)
@@ -1068,6 +1079,7 @@ class AppController:
             print("Erreur : Le fichier ui/manual_quiz.py est introuvable.")
 
     def on_manual_quiz_created(self, quiz_title="Nouveau Quiz", teacher_name="Professeur", quiz_data=None, **kwargs):
+        """Gère la création du quiz manuel en capturant le titre, le nom du professeur et les questions."""
         if quiz_data:
             save_quiz(quiz_title, quiz_data, teacher_name=teacher_name)
             print(f"Quiz '{quiz_title}' créé par {teacher_name} enregistré localement avec succès !")
@@ -1108,17 +1120,18 @@ class AppController:
         ).start()
 
     def generate_quiz_background(self):
-        try:
-            self.current_quiz = self.ai.generate_quiz(
-                self.current_quiz_settings["sujet"],
-                self.current_quiz_settings["nombre"],
-                self.current_quiz_settings["niveau"]
-            )
+        succes, message, donnees = session.generer_quiz(
+            self.current_quiz_settings["sujet"],
+            self.current_quiz_settings["nombre"],
+            self.current_quiz_settings["niveau"],
+        )
 
+        if succes:
+            self.current_quiz = donnees.get("questions", [])
             self.root.after(0, self.show_play_quiz)
-
-        except Exception as erreur:
-            print("Erreur TMY :", erreur)
+        else:
+            print("Erreur TMY :", message)
+            self.root.after(0, lambda: self.show_tmy_generator())
 
     # =====================================
     # Écran de chargement Quiz
@@ -1136,6 +1149,9 @@ class AppController:
         self.clear_page()
         stop_music()
 
+        # On construit un vrai dict (sujet + niveau + questions) au lieu de passer
+        # juste la liste de questions — sinon PlayQuizPage ne peut pas connaître
+        # le titre ni le niveau et retombe sur "Quiz Solo" par défaut.
         quiz_pour_page = {
             "sujet": self.current_quiz_settings.get("sujet", "Quiz Solo"),
             "niveau": self.current_quiz_settings.get("niveau", ""),
@@ -1201,18 +1217,19 @@ class AppController:
         self.show_quiz_loading()
 
         def regen():
-            try:
-                self.current_quiz = self.ai.generate_quiz(
-                    settings["sujet"],
-                    settings["nombre"],
-                    settings["niveau"],
-                    regeneration=True
-                )
+            succes, message, donnees = session.generer_quiz(
+                settings["sujet"],
+                settings["nombre"],
+                settings["niveau"],
+                regeneration=True,
+            )
 
+            if succes:
+                self.current_quiz = donnees.get("questions", [])
                 self.root.after(0, self.show_play_quiz)
-
-            except Exception as erreur:
-                print("Erreur régénération :", erreur)
+            else:
+                print("Erreur régénération :", message)
+                self.root.after(0, lambda: self.show_home())
 
         threading.Thread(target=regen, daemon=True).start()
 
