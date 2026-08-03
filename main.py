@@ -1,7 +1,7 @@
 """
 ===========================================
 TMY Quiz Maker
-Version 4.0
+Version 4.1
 
 Fichier : main.py
 
@@ -19,6 +19,8 @@ Aucune information technique
 ===========================================
 """
 
+import os
+import sys
 import pygame
 import customtkinter as ctk
 from dotenv import load_dotenv
@@ -26,6 +28,19 @@ from dotenv import load_dotenv
 load_dotenv()  # Charge les variables définies dans votre fichier .env
 from core.app_controller import AppController
 from audio.music import start_music
+
+
+# ==========================================
+# Fonction de compatibilité PyInstaller
+# ==========================================
+
+def resource_path(relative_path):
+    """Obtient le chemin absolu vers la ressource, compatible avec le mode normal et PyInstaller"""
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 
 # ==========================================

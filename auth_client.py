@@ -10,11 +10,7 @@ import os
 import requests
 from PIL import Image, ImageDraw, ImageOps
 
-# URL par défaut pour vos tests locaux.
-# Peut aussi être surchargée via la variable d'environnement API_BASE_URL
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://tmy-quiz-server.onrender.com")
-
-# Fichier local où l'on garde le refresh_token entre deux lancements de l'app.
 _SESSION_FILE = os.path.join(os.path.expanduser("~"), ".tmy_quiz_maker_session.json")
 
 
@@ -25,15 +21,11 @@ class AuthSession:
         self.user = None
         self._charger_session_locale()
 
-    # ---------- État ----------
-
     def est_connecte(self):
         return self.access_token is not None and self.user is not None
 
     def _headers_auth(self):
         return {"Authorization": f"Bearer {self.access_token}"}
-
-    # ---------- Persistance locale ----------
 
     def _charger_session_locale(self):
         if not os.path.exists(_SESSION_FILE):
@@ -45,7 +37,7 @@ class AuthSession:
             if self.refresh_token:
                 self._rafraichir_token()
         except Exception:
-            pass  # session locale corrompue ou absente : on repart à zéro
+            pass
 
     def _sauvegarder_session_locale(self):
         with open(_SESSION_FILE, "w", encoding="utf-8") as f:
@@ -58,10 +50,7 @@ class AuthSession:
             except OSError:
                 pass
 
-    # ---------- Actions ----------
-
     def inscrire(self, nom, prenom, username, date_naissance, email, password):
-        """date_naissance au format 'AAAA-MM-JJ'. Retourne (succes: bool, message: str)."""
         try:
             r = requests.post(f"{API_BASE_URL}/auth/register", json={
                 "nom": nom, "prenom": prenom, "username": username,
@@ -84,7 +73,6 @@ class AuthSession:
         return False, data.get("error", "Erreur lors de l'inscription.")
 
     def connecter(self, identifiant, password):
-        """identifiant = username OU email. Retourne (succes: bool, message: str)."""
         try:
             r = requests.post(f"{API_BASE_URL}/auth/login", json={
                 "identifiant": identifiant, "password": password,
@@ -111,8 +99,6 @@ class AuthSession:
         return True, "Connexion réussie."
 
     def _rafraichir_token(self):
-        """Utilise le refresh_token stocké pour obtenir un nouvel access_token,
-        sans redemander le mot de passe. Appelé automatiquement au démarrage."""
         if not self.refresh_token:
             return False
         try:
@@ -142,7 +128,6 @@ class AuthSession:
             return False
 
     def recuperer_stats(self):
-        """Retourne (succes: bool, stats_ou_message). stats = {'total_parties':.., 'meilleur_score':..}"""
         if not self.est_connecte():
             return False, "Non connecté."
         try:
@@ -153,10 +138,7 @@ class AuthSession:
         except Exception:
             return False, "Impossible de contacter le serveur."
 
-    # ---------- Photo de profil (stockée sur le compte, côté serveur) ----------
-
     def avatar_image(self):
-        """Retourne la photo de profil (PIL.Image) décodée depuis le compte, ou None."""
         if not self.user or not self.user.get("avatar_base64"):
             return None
         try:
@@ -166,8 +148,6 @@ class AuthSession:
             return None
 
     def changer_avatar(self, chemin_source):
-        """Recadre l'image choisie en cercle et l'envoie au serveur : elle est alors
-        liée au compte et visible sur tous les appareils / par les autres joueurs."""
         if not self.est_connecte():
             return False, "Vous devez être connecté."
 
@@ -207,11 +187,7 @@ class AuthSession:
         self.user = data.get("user", self.user)
         return True, data.get("message", "Photo de profil mise à jour.")
 
-    # ---------- Scores & XP ----------
-
     def enregistrer_score(self, quiz_id, score, duree_secondes=None):
-        """Envoie le score d'une partie ; le serveur crédite l'XP correspondante
-        et renvoie le profil à jour (utilisé pour rafraîchir le badge NIVEAU/XP)."""
         if not self.est_connecte():
             return False, "Vous devez être connecté."
 
@@ -236,9 +212,6 @@ class AuthSession:
         return True, data.get("message", "Score enregistré.")
 
     def crediter_xp(self, xp, score=None):
-        """Crédite de l'XP sur le compte (quiz solo IA ou partie entre amis —
-        aucun quiz_id nécessaire). Met à jour la session avec le profil renvoyé
-        (le badge NIVEAU/XP de l'accueil reflétera le nouveau total)."""
         if not self.est_connecte():
             return False, "Vous devez être connecté."
 
@@ -272,8 +245,6 @@ class AuthSession:
         self.user = None
         self._effacer_session_locale()
 
-    # ---------- Vérification d'email (par code) ----------
-
     def verifier_email(self, email, code):
         try:
             r = requests.post(f"{API_BASE_URL}/auth/verify-email-with-code", json={
@@ -302,11 +273,7 @@ class AuthSession:
             return False, data.get("error", "Impossible de renvoyer le code.")
         return True, data.get("message", "Nouveau code envoyé.")
 
-    # ---------- Mot de passe oublié (par code) ----------
-
     def demander_code_reinitialisation(self, email):
-        """Déclenche l'envoi du code par email. Réponse volontairement générique
-        côté serveur (ne révèle pas si le compte existe)."""
         try:
             r = requests.post(f"{API_BASE_URL}/auth/forgot-password", json={"email": email}, timeout=20)
             data = r.json()
@@ -332,5 +299,4 @@ class AuthSession:
         return True, data.get("message", "Mot de passe mis à jour.")
 
 
-# Instance unique partagée par toute l'application
 session = AuthSession()
