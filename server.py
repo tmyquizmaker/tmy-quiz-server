@@ -29,6 +29,7 @@ from extensions import db, bcrypt, jwt, mail
 # Blueprints d'authentification et de scores
 from auth import auth_bp
 from scores import scores_bp
+from library_routes import library_bp
 
 # Importation depuis le sous-dossier ai/
 from ai.ai_generator import AIGenerator
@@ -94,7 +95,7 @@ import models
 # --------------------------------------------------------
 with app.app_context():
     db.create_all()
-    # Ajout automatique des colonnes manquantes si la table existait déjà
+    # Ajout automatique des colonnes et tables manquantes si elles n'existaient pas
     with db.engine.connect() as conn:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_base64 TEXT;"))
@@ -102,12 +103,13 @@ with app.app_context():
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_parties INTEGER DEFAULT 0 NOT NULL;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS meilleur_score INTEGER DEFAULT 0 NOT NULL;"))
         conn.commit()
-    print("✅ Base PostgreSQL à jour avec toutes les colonnes (statistiques incluses) !")
+    print("✅ Base PostgreSQL à jour avec toutes les tables, colonnes, bibliothèque et historique !")
 # --------------------------------------------------------
 
 # 3. Enregistrement des routes d'authentification et de scores
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(scores_bp)
+app.register_blueprint(library_bp, url_prefix="/library")
 
 # ========================================================
 # 🟢 ROUTE PING/PONG (Maintien en éveil Render)
