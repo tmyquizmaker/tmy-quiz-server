@@ -299,6 +299,95 @@ class AuthSession:
         self.user = None
         self._effacer_session_locale()
 
+    # ---------- Bibliothèque "Mes Créations" (stockée sur le compte) ----------
+
+    def sauvegarder_creation(self, title, questions, teacher_name="Professeur"):
+        if not self.est_connecte():
+            return None
+        try:
+            r = requests.post(
+                f"{API_BASE_URL}/library/quizzes",
+                json={"title": title, "teacher_name": teacher_name, "questions": questions},
+                headers=self._headers_auth(), timeout=20,
+            )
+            if r.status_code != 201:
+                return None
+            return r.json().get("quiz")
+        except Exception:
+            return None
+
+    def lister_creations(self):
+        if not self.est_connecte():
+            return []
+        try:
+            r = requests.get(f"{API_BASE_URL}/library/quizzes", headers=self._headers_auth(), timeout=20)
+            if r.status_code != 200:
+                return []
+            return r.json()
+        except Exception:
+            return []
+
+    def supprimer_creation(self, quiz_id):
+        if not self.est_connecte():
+            return False
+        try:
+            r = requests.delete(f"{API_BASE_URL}/library/quizzes/{quiz_id}", headers=self._headers_auth(), timeout=20)
+            return r.status_code == 200
+        except Exception:
+            return False
+
+    def supprimer_toutes_creations(self):
+        if not self.est_connecte():
+            return False
+        try:
+            r = requests.delete(f"{API_BASE_URL}/library/quizzes", headers=self._headers_auth(), timeout=20)
+            return r.status_code == 200
+        except Exception:
+            return False
+
+    # ---------- Historique des parties (stocké sur le compte) ----------
+
+    def sauvegarder_session_partie(self, session_data):
+        if not self.est_connecte():
+            return False
+        try:
+            r = requests.post(
+                f"{API_BASE_URL}/library/sessions", json=session_data,
+                headers=self._headers_auth(), timeout=20,
+            )
+            return r.status_code == 201
+        except Exception:
+            return False
+
+    def lister_sessions(self):
+        if not self.est_connecte():
+            return []
+        try:
+            r = requests.get(f"{API_BASE_URL}/library/sessions", headers=self._headers_auth(), timeout=20)
+            if r.status_code != 200:
+                return []
+            return r.json()
+        except Exception:
+            return []
+
+    def supprimer_session_partie(self, session_id):
+        if not self.est_connecte():
+            return False
+        try:
+            r = requests.delete(f"{API_BASE_URL}/library/sessions/{session_id}", headers=self._headers_auth(), timeout=20)
+            return r.status_code == 200
+        except Exception:
+            return False
+
+    def vider_sessions(self):
+        if not self.est_connecte():
+            return False
+        try:
+            r = requests.delete(f"{API_BASE_URL}/library/sessions", headers=self._headers_auth(), timeout=20)
+            return r.status_code == 200
+        except Exception:
+            return False
+
     # ---------- Vérification d'email (par code) ----------
 
     def verifier_email(self, email, code):
