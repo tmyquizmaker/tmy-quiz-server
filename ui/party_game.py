@@ -134,13 +134,21 @@ class PartyGamePage(ctk.CTkFrame):
         """Appelé quand le serveur envoie 'party_question'."""
         self.question_courante = data.get("question", {})
         index = data.get("question_index", 0)
-        total = data.get("total_questions", index)
+        question_mode = data.get("question_mode", "infinite")
+        question_limit = data.get("question_limit")
+        total_sujets = data.get("total_subjects", 0)
         sujet = data.get("subject", "")
         difficulte = data.get("difficulty", "easy")
 
         self.a_repondu = False
         self.status_label.configure(text="")
-        self.question_num_label.configure(text=f"Question {index} / {total}")
+
+        if question_mode == "fixed" and question_limit:
+            self.question_num_label.configure(text=f"Question {index} / {question_limit}")
+        else:
+            suffixe = f" (sur {total_sujets} sujets, en boucle)" if total_sujets else ""
+            self.question_num_label.configure(text=f"Question {index}{suffixe}")
+
         self.subject_label.configure(text=f"📚 Sujet : {sujet}")
 
         badge_diff = {"easy": "🟢 Facile", "medium": "🟠 Moyen", "hard": "🔴 Difficile"}.get(difficulte, difficulte)
