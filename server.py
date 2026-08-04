@@ -432,11 +432,29 @@ def _construire_file_sujets(lobby):
 
 @socketio.on("create_party_room")
 def handle_create_party_room(data):
-    """Créé une salle du Niveau 1. L'hôte propose déjà son propre sujet."""
+    """Créé une salle du Niveau 1. L'hôte propose déjà son propre sujet et
+    choisit le mode de génération : 'infinite' (sans fin) ou 'fixed' (s'arrête
+    après question_limit questions)."""
     pin = data.get("pin", "").replace(" ", "")
     host_name = data.get("name", "").strip()
     subject = data.get("subject", "").strip()
     max_players = int(data.get("max_players") or 4)
+
+    question_mode = data.get("question_mode") or "infinite"
+    if question_mode not in ("infinite", "fixed"):
+        question_mode = "infinite"
+
+    question_limit = data.get("question_limit")
+    try:
+        question_limit = int(question_limit) if question_limit else None
+    except (TypeError, ValueError):
+        question_limit = None
+
+    # Filet de sécurité : mode 'fixed' sans nombre valide -> on retombe sur l'infini
+    # plutôt que de planter la partie.
+    if question_mode == "fixed" and not question_limit:
+        question_mode = "infinite"
+        question_limit = None
 
     active_lobbies[pin] = {
         "mode": "party",
@@ -450,11 +468,17 @@ def handle_create_party_room(data):
         "abandoned": set(),
         "party_started": False,
         "current_difficulty": "easy",
+        "question_mode": question_mode,
+        "question_limit": question_limit,
     }
     sid_to_player[request.sid] = (pin, host_name)
     join_room(pin)
 
-    print(f"🎉 Salle 'Questions entre amis' créée : PIN [{pin}] par {host_name} | sujet: {subject} | cible: {max_players}")
+    print(
+        f"🎉 Salle 'Questions entre amis' créée : PIN [{pin}] par {host_name} | sujet: {subject} | "
+        f"cible: {max_players} | mode questions: {question_mode}"
+        + (f" ({question_limit})" if question_limit else "")
+    )
     emit("room_created", {"success": True, "pin": pin})
 
 
@@ -544,56 +568,103 @@ def _lancer_partie(pin):
         return
 
     lobby["party_started"] = True
-    lobby["subject_queue"] = _construire_file_sujets(lobby)
+    # 👇 Liste FIXE des sujets uniques : on boucle dessus (round-robin). En mode
+    # 'infinite' cette boucle ne s'arrête jamais ; en mode 'fixed' elle s'arrête
+    # dès que question_limit questions ont été envoyées (voir plus bas).
+    lobby["subject_cycle"] = _construire_file_sujets(lobby)
+    lobby["cycle_index"] = 0
     lobby["current_difficulty"] = "easy"
     lobby["scores"] = {}
     lobby["answered_current"] = set()
     lobby["quiz_ended_sent"] = False
     lobby["current_question"] = 0
+    # Rétrocompatibilité : anciennes salles/anciens clients sans ces clés -> infini
+    lobby.setdefault("question_mode", "infinite")
+    lobby.setdefault("question_limit", None)
 
-    if not lobby["subject_queue"]:
+    if not lobby["subject_cycle"]:
         socketio.emit("party_error", {"message": "Aucun sujet renseigné, impossible de lancer la partie."}, to=pin)
         lobby["party_started"] = False
         return
 
-    print(f"🚀 Partie 'Questions entre amis' lancée pour [{pin}] — {len(lobby['subject_queue'])} sujet(s) en file")
-    socketio.emit("party_started", {"pin": pin, "total_questions": len(lobby["subject_queue"])}, to=pin)
+    mode_desc = (
+        f"{lobby['question_limit']} questions (mode fixe)"
+        if lobby["question_mode"] == "fixed" and lobby["question_limit"]
+        else "boucle infinie"
+    )
+    print(f"🚀 Partie 'Questions entre amis' lancée pour [{pin}] — {len(lobby['subject_cycle'])} sujet(s), {mode_desc}")
+    socketio.emit("party_started", {
+        "pin": pin,
+        "question_mode": lobby["question_mode"],
+        "question_limit": lobby["question_limit"],
+        "total_subjects": len(lobby["subject_cycle"]),
+    }, to=pin)
     _envoyer_prochaine_question_party(pin)
 
 
-def _envoyer_prochaine_question_party(pin):
+def _prochain_sujet(lobby):
+    """Renvoie le prochain sujet dans la boucle (recommence au début une fois
+    tous les sujets passés, pour permettre une partie plus longue que le
+    nombre de sujets uniques, que ce soit en mode infini ou fixe)."""
+    cycle = lobby.get("subject_cycle", [])
+    if not cycle:
+        return None
+    sujet = cycle[lobby["cycle_index"] % len(cycle)]
+    lobby["cycle_index"] += 1
+    return sujet
+
+
+def _envoyer_prochaine_question_party(pin, tentatives=0):
     lobby = active_lobbies.get(pin)
-    if not lobby:
+    if not lobby or not lobby.get("party_started") or lobby.get("quiz_ended_sent"):
         return
 
-    if not lobby["subject_queue"]:
+    # Mode 'fixed' : on s'arrête proprement une fois le nombre demandé atteint.
+    limite = lobby.get("question_limit")
+    if lobby.get("question_mode") == "fixed" and limite and lobby["current_question"] >= limite:
         _terminer_partie(pin)
         return
 
-    sujet = lobby["subject_queue"].pop(0)
+    nb_sujets = len(lobby.get("subject_cycle", []))
+    if tentatives >= nb_sujets + 2:
+        # Sécurité : tous les sujets ont échoué d'affilée (ex: API IA en panne).
+        # Mieux vaut arrêter proprement que de boucler indéfiniment sur des erreurs.
+        print(f"⛔ [{pin}] Échec de génération IA sur tous les sujets, arrêt de la partie.")
+        _terminer_partie(pin, message="Partie arrêtée : l'IA n'arrive pas à générer de questions pour le moment.")
+        return
+
+    sujet = _prochain_sujet(lobby)
+    if not sujet:
+        _terminer_partie(pin)
+        return
+
     lobby["current_subject"] = sujet
     lobby["answered_current"] = set()
     lobby["party_stats_current"] = {"repondu": 0, "correct": 0}
 
-    try:
-        question = ai_engine.generate_single_question(sujet, lobby["current_difficulty"])
-    except Exception as e:
-        print(f"❌ Erreur génération IA pour le sujet '{sujet}': {e}")
-        question = {
-            "question": f"(Erreur IA, réessai auto au prochain sujet) — {sujet}",
-            "A": "—", "B": "—", "C": "—", "D": "—",
-            "correct": "A", "difficulty": lobby["current_difficulty"], "time": 20,
-        }
+    question = None
+    for essai in range(3):  # 1 essai + 2 retentatives avant d'abandonner CE sujet pour ce tour
+        try:
+            question = ai_engine.generate_single_question(sujet, lobby["current_difficulty"])
+            break
+        except Exception as e:
+            print(f"❌ [{pin}] Erreur génération IA pour '{sujet}' (essai {essai + 1}/3) : {e}")
+
+    if question is None:
+        print(f"⏭️ [{pin}] Sujet '{sujet}' ignoré après 3 échecs IA, passage au sujet suivant du cycle.")
+        _envoyer_prochaine_question_party(pin, tentatives=tentatives + 1)
+        return
 
     question["subject"] = sujet
     lobby["current_question_data"] = question
     lobby["current_question"] += 1
-    total_restant = lobby["current_question"] + len(lobby["subject_queue"])
 
     socketio.emit("party_question", {
         "question": question,
         "question_index": lobby["current_question"],
-        "total_questions": total_restant,
+        "question_mode": lobby.get("question_mode", "infinite"),
+        "question_limit": lobby.get("question_limit"),
+        "total_subjects": nb_sujets,
         "subject": sujet,
         "difficulty": lobby["current_difficulty"],
     }, to=pin)
@@ -693,8 +764,24 @@ def _enregistrer_abandon(pin, player):
     print(f"🚪 '{player}' a abandonné la salle [{pin}] ({len(lobby['abandoned'])} abandon(s))")
 
     total_depart = len(lobby.get("players", [])) or 1
-    if len(lobby["abandoned"]) / total_depart >= 0.75:
-        _terminer_partie(pin, message="Partie arrêtée : trop de joueurs ont quitté.")
+    joueurs_actifs_restants = total_depart - len(lobby["abandoned"])
+
+    # Règle 1 (groupes) : 3/4 des joueurs de départ ont abandonné.
+    seuil_atteint = (len(lobby["abandoned"]) / total_depart) >= 0.75
+
+    # Règle 2 (petits groupes, ex: 2 joueurs) : il ne reste plus qu'UN SEUL joueur
+    # actif. Avec 2 joueurs, un seul abandon = 50% -> le seuil des 3/4 n'est
+    # jamais atteint, et le joueur restant se retrouverait seul indéfiniment
+    # face à l'IA sans que personne ne puisse arrêter la partie.
+    dernier_joueur_seul = total_depart >= 2 and joueurs_actifs_restants <= 1
+
+    if seuil_atteint or dernier_joueur_seul:
+        message = (
+            "Partie arrêtée : il ne reste plus qu'un seul joueur."
+            if dernier_joueur_seul and not seuil_atteint
+            else "Partie arrêtée : trop de joueurs ont quitté."
+        )
+        _terminer_partie(pin, message=message)
 
 
 @socketio.on("player_abandon")
