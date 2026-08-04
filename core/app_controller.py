@@ -238,7 +238,7 @@ class AppController:
         )
         self.party_create_page.pack(fill="both", expand=True)
 
-    def verify_and_create_party_room(self, full_name, subject, nb_joueurs):
+    def verify_and_create_party_room(self, full_name, subject, nb_joueurs, question_mode="infinite", question_limit=None):
         self.show_connecting_screen("📡 Création de la salle...")
         pin_genere = f"{__import__('random').randint(100, 999)}{__import__('random').randint(100, 999)}"
 
@@ -254,7 +254,11 @@ class AppController:
                 self.root.after(0, lambda: self._show_party_create_error(message))
 
         def do_connect():
-            self.network.create_party_room(pin_genere, full_name, subject, nb_joueurs, response_callback=on_response)
+            self.network.create_party_room(
+                pin_genere, full_name, subject, nb_joueurs,
+                question_mode=question_mode, question_limit=question_limit,
+                response_callback=on_response
+            )
 
         threading.Thread(target=do_connect, daemon=True).start()
 
