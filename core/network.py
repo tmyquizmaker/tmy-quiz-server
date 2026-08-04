@@ -221,13 +221,16 @@ class NetworkClient:
     # ----------------------------------------------------
     # 🎉 Mode "Questions entre amis" (Niveau 1)
     # ----------------------------------------------------
-    def create_party_room(self, pin, name, subject, max_players, response_callback=None):
-        """Crée une salle du mode party avec le sujet de l'hôte."""
+    def create_party_room(self, pin, name, subject, max_players, question_mode="infinite", question_limit=None, response_callback=None):
+        """Crée une salle du mode party avec le sujet de l'hôte.
+        question_mode: 'infinite' (boucle sans fin sur les sujets) ou 'fixed'
+        (s'arrête après question_limit questions)."""
         self.on_room_created_callback = response_callback
         self.connect()
         if self.is_connected:
             self.sio.emit("create_party_room", {
                 "pin": pin, "name": name, "subject": subject, "max_players": max_players,
+                "question_mode": question_mode, "question_limit": question_limit,
             })
         elif response_callback:
             response_callback({"success": False, "message": "❌ Impossible de contacter le serveur."})
